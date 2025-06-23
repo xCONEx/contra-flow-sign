@@ -1,40 +1,78 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { StatCard } from '@/components/StatCard';
 import { QuickActions } from '@/components/QuickActions';
-import { FileText, Users, CheckCircle, Clock, TrendingUp, DollarSign } from 'lucide-react';
-import { useContracts } from '@/hooks/useContracts';
-import { useNotifications } from '@/hooks/useNotifications';
+import { FileText, Users, CheckCircle, Clock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 const Index = () => {
-  const { contracts, loading: contractsLoading } = useContracts();
-  const { notifications, loading: notificationsLoading } = useNotifications();
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    totalContracts: 0,
+    signedContracts: 0,
+    pendingContracts: 0,
+    draftContracts: 0
+  });
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Calcular estatísticas dos contratos
-  const totalContracts = contracts.length;
-  const signedContracts = contracts.filter(c => c.status === 'signed').length;
-  const pendingContracts = contracts.filter(c => c.status === 'sent').length;
-  const draftContracts = contracts.filter(c => c.status === 'draft').length;
+  useEffect(() => {
+    if (!user) return;
 
-  // Calcular taxa de conversão
-  const conversionRate = totalContracts > 0 ? (signedContracts / totalContracts) * 100 : 0;
+    const fetchData = async () => {
+      try {
+        // Fetch contracts count
+        const { count: totalCount } = await supabase
+          .from('contracts')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
 
-  // Atividades recentes (contratos criados/atualizados recentemente)
-  const recentActivities = contracts
-    .slice(0, 5)
-    .map(contract => ({
-      id: contract.id,
-      action: contract.status === 'draft' ? 'Contrato criado' : 
-              contract.status === 'sent' ? 'Contrato enviado' :
-              contract.status === 'signed' ? 'Contrato assinado' : 'Contrato atualizado',
-      target: contract.title,
-      time: new Date(contract.updated_at).toLocaleString('pt-BR'),
-      type: contract.status === 'signed' ? 'success' as const : 
-            contract.status === 'sent' ? 'info' as const : 'default' as const
-    }));
+        const { count: signedCount } = await supabase
+          .from('contracts')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'signed');
 
-  if (contractsLoading || notificationsLoading) {
+        const { count: pendingCount } = await supabase
+          .from('contracts')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'sent');
+
+        const { count: draftCount } = await supabase
+          .from('contracts')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'draft');
+
+        // Fetch user profile
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        setStats({
+          totalContracts: totalCount || 0,
+          signedContracts: signedCount || 0,
+          pendingContracts: pendingCount || 0,
+          draftContracts: draftCount || 0
+        });
+
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  if (loading) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
@@ -44,6 +82,10 @@ const Index = () => {
     );
   }
 
+  const conversionRate = stats.totalContracts > 0 ? (stats.signedContracts / stats.totalContracts) * 100 : 0;
+  const contractsUsed = userProfile?.contracts_count || 0;
+  const contractsLimit = userProfile?.contracts_limit || 5;
+
   return (
     <Layout>
       <div className="space-y-8">
@@ -51,7 +93,7 @@ const Index = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-2">
-            Acompanhe seus contratos e estatísticas
+            Bem-vindo, {userProfile?.name || 'Usuário'}
           </p>
         </div>
 
@@ -62,13 +104,13 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="Total de Contratos"
-            value={totalContracts}
+            value={stats.totalContracts}
             icon={FileText}
-            trend={{ value: totalContracts > 0 ? 100 : 0, isPositive: true }}
+            trend={{ value: stats.totalContracts, isPositive: true }}
           />
           <StatCard
             title="Contratos Assinados"
-            value={signedContracts}
+            value={stats.signedContracts}
             icon={CheckCircle}
             trend={{ 
               value: Math.round(conversionRate), 
@@ -77,92 +119,56 @@ const Index = () => {
           />
           <StatCard
             title="Aguardando Assinatura"
-            value={pendingContracts}
+            value={stats.pendingContracts}
             icon={Clock}
-            trend={{ value: pendingContracts > 0 ? 5 : 0, isPositive: pendingContracts === 0 }}
+            trend={{ value: 0, isPositive: true }}
           />
           <StatCard
             title="Rascunhos"
-            value={draftContracts}
+            value={stats.draftContracts}
             icon={FileText}
-            trend={{ value: draftContracts > 0 ? 2 : 0, isPositive: draftContracts === 0 }}
+            trend={{ value: 0, isPositive: true }}
           />
         </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Activity */}
+          {/* Summary */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold mb-4">Atividade Recente</h3>
-              {recentActivities.length > 0 ? (
-                <div className="space-y-4">
-                  {recentActivities.map((activity) => (
-                    <div key={activity.id} className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
-                      <div className={`w-2 h-2 rounded-full ${
-                        activity.type === 'success' ? 'bg-green-500' :
-                        activity.type === 'info' ? 'bg-blue-500' : 'bg-gray-400'
-                      }`} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                        <p className="text-sm text-gray-500">{activity.target}</p>
-                      </div>
-                      <span className="text-xs text-gray-400">{activity.time}</span>
-                    </div>
-                  ))}
+              <h3 className="text-lg font-semibold mb-4">Resumo</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Contratos criados este mês</span>
+                  <span className="font-semibold">{contractsUsed}</span>
                 </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">Nenhuma atividade recente</p>
-              )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Taxa de sucesso</span>
+                  <span className="font-semibold">{conversionRate.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Contratos pendentes</span>
+                  <span className="font-semibold">{stats.pendingContracts}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Summary Cards */}
-          <div className="space-y-6">
-            {/* Resumo Mensal */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold mb-4">Resumo do Mês</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-gray-600">Contratos este mês</span>
-                  </div>
-                  <span className="font-semibold">{totalContracts}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm text-gray-600">Taxa de sucesso</span>
-                  </div>
-                  <span className="font-semibold">{conversionRate.toFixed(1)}%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm text-gray-600">Pendentes</span>
-                  </div>
-                  <span className="font-semibold">{pendingContracts}</span>
-                </div>
-              </div>
+          {/* Plano Atual */}
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
+            <h3 className="text-lg font-semibold mb-2">Plano Gratuito</h3>
+            <p className="text-blue-100 mb-4">
+              {Math.max(contractsLimit - contractsUsed, 0)} contratos restantes
+            </p>
+            <div className="w-full bg-blue-400 rounded-full h-2 mb-4">
+              <div 
+                className="bg-white h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${Math.min((contractsUsed / contractsLimit) * 100, 100)}%` }}
+              ></div>
             </div>
-
-            {/* Plano Atual */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
-              <h3 className="text-lg font-semibold mb-2">Plano Gratuito</h3>
-              <p className="text-blue-100 mb-4">
-                {Math.max(3 - totalContracts, 0)} contratos restantes este mês
-              </p>
-              <div className="w-full bg-blue-400 rounded-full h-2 mb-4">
-                <div 
-                  className="bg-white h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${Math.min((totalContracts / 3) * 100, 100)}%` }}
-                ></div>
-              </div>
-              <button className="w-full bg-white text-blue-600 py-2 px-4 rounded-lg font-medium hover:bg-blue-50 transition-colors">
-                Fazer Upgrade
-              </button>
-            </div>
+            <button className="w-full bg-white text-blue-600 py-2 px-4 rounded-lg font-medium hover:bg-blue-50 transition-colors">
+              Fazer Upgrade
+            </button>
           </div>
         </div>
       </div>

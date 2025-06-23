@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   Users, 
@@ -25,9 +25,21 @@ const menuItems = [
 ];
 
 export const Sidebar = () => {
-  const { signOut, user } = useAuth();
+  const { signOut, user, getUserProfile } = useAuth();
   const navigate = useNavigate();
   const currentPath = window.location.pathname;
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        const { data } = await getUserProfile();
+        setUserProfile(data);
+      }
+    };
+    
+    fetchProfile();
+  }, [user, getUserProfile]);
 
   const handleNavigation = (href: string) => {
     navigate(href);
@@ -41,17 +53,16 @@ export const Sidebar = () => {
       navigate('/login', { replace: true });
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      // Forçar redirecionamento mesmo com erro
       navigate('/login', { replace: true });
     }
   };
 
+  const contractsCount = userProfile?.contracts_count || 0;
+  const contractsLimit = userProfile?.contracts_limit || 5;
+  const remainingContracts = Math.max(0, contractsLimit - contractsCount);
+
   return (
     <>
-      {/* Mobile backdrop */}
-      <div className="fixed inset-0 z-40 lg:hidden bg-gray-600 bg-opacity-75 opacity-0 pointer-events-none transition-opacity" />
-      
-      {/* Sidebar */}
       <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform">
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -83,20 +94,44 @@ export const Sidebar = () => {
             ))}
           </nav>
           
+          {/* Plan Info */}
+          <div className="px-4 py-2 border-t border-gray-200">
+            <div className="bg-blue-50 rounded-lg p-3">
+              <h4 className="text-sm font-medium text-blue-900 mb-1">Plano Gratuito</h4>
+              <p className="text-xs text-blue-700">
+                {remainingContracts} de {contractsLimit} contratos restantes
+              </p>
+              <div className="w-full bg-blue-200 rounded-full h-1.5 mt-2">
+                <div 
+                  className="bg-blue-600 h-1.5 rounded-full transition-all" 
+                  style={{ width: `${(contractsCount / contractsLimit) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          
           {/* User section */}
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center space-x-3 mb-3">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-700">
-                  {user?.user_metadata?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                </span>
-              </div>
+              {userProfile?.avatar_url ? (
+                <img 
+                  src={userProfile.avatar_url} 
+                  alt="Avatar" 
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-gray-700">
+                    {userProfile?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                  </span>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário'}
+                  {userProfile?.name || user?.email?.split('@')[0] || 'Usuário'}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
-                  Plano Gratuito
+                  {userProfile?.company_name || 'Freelancer'}
                 </p>
               </div>
             </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileText, Save, Send, User, DollarSign, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useContracts } from '@/hooks/useContracts';
+import { contractTemplates } from '@/data/contractTemplates';
 
 const NewContract = () => {
   const [title, setTitle] = useState('');
@@ -23,14 +23,6 @@ const NewContract = () => {
   
   const { createContract } = useContracts();
   const { toast } = useToast();
-
-  const templates = [
-    { id: 'service', name: 'Contrato de Prestação de Serviços' },
-    { id: 'website', name: 'Desenvolvimento de Website' },
-    { id: 'marketing', name: 'Serviços de Marketing Digital' },
-    { id: 'consulting', name: 'Consultoria' },
-    { id: 'custom', name: 'Personalizado' }
-  ];
 
   const handleSaveDraft = async () => {
     if (!title.trim()) {
@@ -46,7 +38,10 @@ const NewContract = () => {
     try {
       await createContract({
         title,
-        content: content || `Contrato: ${title}\n\nCliente: ${clientName}\nEmail: ${clientEmail}\nValor: R$ ${value}\nPrazo: ${dueDate}\n\n${content}`
+        content: content || `Contrato: ${title}\n\nCliente: ${clientName}\nEmail: ${clientEmail}\nValor: R$ ${value}\nPrazo: ${dueDate}\n\n${content}`,
+        client_name: clientName,
+        client_email: clientEmail,
+        value: value ? parseFloat(value) : undefined
       });
       
       toast({
@@ -75,88 +70,18 @@ const NewContract = () => {
   };
 
   const loadTemplate = (templateId: string) => {
-    const templateContent = {
-      service: `CONTRATO DE PRESTAÇÃO DE SERVIÇOS
-
-CONTRATANTE: ${clientName || '[Nome do Cliente]'}
-CONTRATADO: [Sua Empresa]
-
-1. OBJETO
-O presente contrato tem por objeto a prestação de serviços de [especificar serviços].
-
-2. PRAZO
-O prazo para execução dos serviços será de [prazo] dias.
-
-3. VALOR
-O valor total dos serviços é de R$ ${value || '[valor]'}.
-
-4. PAGAMENTO
-O pagamento será realizado em [condições de pagamento].
-
-5. RESPONSABILIDADES
-[Especificar responsabilidades das partes]`,
+    const selectedTemplate = contractTemplates.find(t => t.id === templateId);
+    if (selectedTemplate) {
+      let templateContent = selectedTemplate.content;
       
-      website: `CONTRATO DE DESENVOLVIMENTO DE WEBSITE
-
-CONTRATANTE: ${clientName || '[Nome do Cliente]'}
-DESENVOLVEDOR: [Sua Empresa]
-
-1. ESCOPO DO PROJETO
-Desenvolvimento de website responsivo incluindo:
-- Design personalizado
-- Funcionalidades específicas
-- Integração com sistemas
-
-2. PRAZO DE ENTREGA
-Prazo estimado: ${dueDate || '[data]'}
-
-3. INVESTIMENTO
-Valor total: R$ ${value || '[valor]'}
-
-4. ETAPAS DE DESENVOLVIMENTO
-- Briefing e planejamento
-- Design e prototipação
-- Desenvolvimento
-- Testes e ajustes
-- Entrega final`,
+      // Substituir placeholders com dados do formulário
+      templateContent = templateContent.replace(/\[Nome do Cliente\]/g, clientName || '[Nome do Cliente]');
+      templateContent = templateContent.replace(/\[Email\]/g, clientEmail || '[Email]');
+      templateContent = templateContent.replace(/\[Valor\]/g, value || '[Valor]');
+      templateContent = templateContent.replace(/\[Data\]/g, dueDate || '[Data]');
       
-      marketing: `CONTRATO DE SERVIÇOS DE MARKETING DIGITAL
-
-CONTRATANTE: ${clientName || '[Nome do Cliente]'}
-AGÊNCIA: [Sua Empresa]
-
-1. SERVIÇOS INCLUSOS
-- Gestão de redes sociais
-- Criação de conteúdo
-- Campanhas publicitárias
-- Relatórios mensais
-
-2. PERÍODO
-Período de prestação: [período]
-
-3. INVESTIMENTO
-Valor mensal: R$ ${value || '[valor]'}`,
-      
-      consulting: `CONTRATO DE CONSULTORIA
-
-CONTRATANTE: ${clientName || '[Nome do Cliente]'}
-CONSULTOR: [Seu Nome]
-
-1. OBJETO
-Prestação de serviços de consultoria em [área específica].
-
-2. METODOLOGIA
-[Descrever metodologia de trabalho]
-
-3. ENTREGÁVEIS
-[Listar entregáveis esperados]
-
-4. INVESTIMENTO
-Valor: R$ ${value || '[valor]'}`
-    };
-    
-    if (templateId && templateId !== 'custom') {
-      setContent(templateContent[templateId as keyof typeof templateContent] || '');
+      setContent(templateContent);
+      setTitle(selectedTemplate.name);
     }
   };
 
@@ -201,9 +126,9 @@ Valor: R$ ${value || '[valor]'}`
                       <SelectValue placeholder="Selecione um template" />
                     </SelectTrigger>
                     <SelectContent>
-                      {templates.map((temp) => (
+                      {contractTemplates.map((temp) => (
                         <SelectItem key={temp.id} value={temp.id}>
-                          {temp.name}
+                          {temp.name} - {temp.category}
                         </SelectItem>
                       ))}
                     </SelectContent>

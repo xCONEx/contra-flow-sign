@@ -8,6 +8,9 @@ export interface Contract {
   user_id: string;
   title: string;
   content: string;
+  client_name?: string;
+  client_email?: string;
+  value?: number;
   status: 'draft' | 'sent' | 'signed' | 'expired';
   signature_token?: string;
   expires_at?: string;
@@ -19,7 +22,7 @@ export const useContracts = () => {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, incrementContractCount } = useAuth();
 
   const fetchContracts = async () => {
     if (!user) return;
@@ -50,6 +53,9 @@ export const useContracts = () => {
   const createContract = async (contractData: {
     title: string;
     content: string;
+    client_name?: string;
+    client_email?: string;
+    value?: number;
   }) => {
     if (!user) throw new Error('Usuário não autenticado');
 
@@ -59,6 +65,9 @@ export const useContracts = () => {
         user_id: user.id,
         title: contractData.title,
         content: contractData.content,
+        client_name: contractData.client_name,
+        client_email: contractData.client_email,
+        value: contractData.value,
         status: 'draft'
       })
       .select()
@@ -68,7 +77,10 @@ export const useContracts = () => {
       throw error;
     }
 
-    await fetchContracts(); // Recarregar lista
+    // Incrementar contador apenas quando criar um novo contrato
+    await incrementContractCount();
+    
+    await fetchContracts();
     return data;
   };
 
@@ -84,7 +96,7 @@ export const useContracts = () => {
       throw error;
     }
 
-    await fetchContracts(); // Recarregar lista
+    await fetchContracts();
     return data;
   };
 
@@ -98,7 +110,7 @@ export const useContracts = () => {
       throw error;
     }
 
-    await fetchContracts(); // Recarregar lista
+    await fetchContracts();
   };
 
   const sendContract = async (id: string, expiresInDays: number = 30) => {
