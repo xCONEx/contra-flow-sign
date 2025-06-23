@@ -10,6 +10,10 @@ import Login from "./pages/Login";
 import Contracts from "./pages/Contracts";
 import Clients from "./pages/Clients";
 import Reports from "./pages/Reports";
+import NewContract from "./pages/NewContract";
+import NewClient from "./pages/NewClient";
+import Notifications from "./pages/Notifications";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,12 +80,7 @@ const App = () => (
             path="/contracts/new"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold mb-4">Novo Contrato</h2>
-                    <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
-                  </div>
-                </div>
+                <NewContract />
               </ProtectedRoute>
             }
           />
@@ -89,12 +88,7 @@ const App = () => (
             path="/clients/new"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold mb-4">Novo Cliente</h2>
-                    <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
-                  </div>
-                </div>
+                <NewClient />
               </ProtectedRoute>
             }
           />
@@ -102,12 +96,7 @@ const App = () => (
             path="/notifications"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold mb-4">Notificações</h2>
-                    <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
-                  </div>
-                </div>
+                <Notifications />
               </ProtectedRoute>
             }
           />
@@ -115,12 +104,7 @@ const App = () => (
             path="/settings"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold mb-4">Configurações</h2>
-                    <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
-                  </div>
-                </div>
+                <Settings />
               </ProtectedRoute>
             }
           />
