@@ -1,4 +1,3 @@
-
 import { supabase } from '../../lib/supabase';
 import { Contract, CreateContractRequest, SendContractRequest, SignContractRequest, ContractEvent } from '../../types/api';
 import { digitalSignatureService } from './DigitalSignatureService';
@@ -18,7 +17,7 @@ export class ContractsService {
         *,
         clients:client_id(*),
         templates:template_id(*)
-      `)
+      `, { count: 'exact' })
       .eq('user_id', params.userId)
       .order('created_at', { ascending: false });
 
@@ -32,8 +31,7 @@ export class ContractsService {
 
     const offset = (params.page - 1) * params.limit;
     const { data, error, count } = await query
-      .range(offset, offset + params.limit - 1)
-      .select('*', { count: 'exact' });
+      .range(offset, offset + params.limit - 1);
 
     if (error) throw error;
 

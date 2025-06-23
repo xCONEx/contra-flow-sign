@@ -1,5 +1,5 @@
 
-import { Contract } from '@/types/api';
+import { Contract } from '../../types/api';
 
 export class WebhookService {
   private readonly financeFlowWebhookUrl = process.env.FINANCEFLOW_WEBHOOK_URL;

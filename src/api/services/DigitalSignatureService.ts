@@ -1,6 +1,6 @@
 
 import crypto from 'crypto';
-import { SignatureData } from '@/types/api';
+import { SignatureData } from '../../types/api';
 
 export class DigitalSignatureService {
   private readonly algorithm = 'sha256';

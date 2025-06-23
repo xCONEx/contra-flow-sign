@@ -1,12 +1,13 @@
 
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { contractsService } from '../services/ContractsService';
 import { pdfService } from '../services/PdfService';
 import { webhookService } from '../services/WebhookService';
-import { Contract, CreateContractRequest, SendContractRequest } from '@/types/api';
+import { Contract, CreateContractRequest, SendContractRequest } from '../../types/api';
+import { AuthenticatedRequest } from '../middleware/auth';
 
 export class ContractsController {
-  async getContracts(req: Request, res: Response) {
+  async getContracts(req: AuthenticatedRequest, res: Response) {
     try {
       const { page = 1, limit = 20, status, client_id } = req.query;
       const userId = req.user?.id;
@@ -33,7 +34,7 @@ export class ContractsController {
     }
   }
 
-  async getContract(req: Request, res: Response) {
+  async getContract(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
@@ -60,7 +61,7 @@ export class ContractsController {
     }
   }
 
-  async createContract(req: Request, res: Response) {
+  async createContract(req: AuthenticatedRequest, res: Response) {
     try {
       const userId = req.user?.id;
       const contractData: CreateContractRequest = req.body;
@@ -96,7 +97,7 @@ export class ContractsController {
     }
   }
 
-  async updateContract(req: Request, res: Response) {
+  async updateContract(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
@@ -130,7 +131,7 @@ export class ContractsController {
     }
   }
 
-  async sendContract(req: Request, res: Response) {
+  async sendContract(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
@@ -162,7 +163,7 @@ export class ContractsController {
     }
   }
 
-  async signContract(req: Request, res: Response) {
+  async signContract(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       const signData = req.body;
@@ -193,7 +194,7 @@ export class ContractsController {
     }
   }
 
-  async deleteContract(req: Request, res: Response) {
+  async deleteContract(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
@@ -217,7 +218,7 @@ export class ContractsController {
     }
   }
 
-  async getContractEvents(req: Request, res: Response) {
+  async getContractEvents(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
