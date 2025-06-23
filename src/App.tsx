@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useMemo } from "react";
 
 // Lazy load components
 const Index = lazy(() => import("./pages/Index"));
@@ -19,17 +19,6 @@ const NewClient = lazy(() => import("./pages/NewClient"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -75,6 +64,18 @@ const App = () => {
     return !localStorage.getItem('app_loaded') && !hasOAuthParams;
   });
   const { initializing } = useAuth();
+
+  // Memoizar o QueryClient para evitar recriações
+  const queryClient = useMemo(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
+    },
+  }), []);
 
   const handleLoadingComplete = () => {
     localStorage.setItem('app_loaded', 'true');

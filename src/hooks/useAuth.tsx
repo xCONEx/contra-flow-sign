@@ -1,9 +1,12 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User, Session, Provider } from '@supabase/supabase-js';
 
 const DEPLOY_VERSION = '1.0.7';
+
+// Singleton para controlar a inicialização global
+let globalInitialized = false;
+let globalInitializing = false;
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -11,10 +14,16 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
   const initialized = useRef(false);
+  const subscriptionRef = useRef<any>(null);
 
   useEffect(() => {
-    if (initialized.current) return;
+    // Prevenir múltiplas inicializações
+    if (initialized.current || globalInitialized || globalInitializing) {
+      return;
+    }
+
     initialized.current = true;
+    globalInitializing = true;
 
     // Check for version update
     const lastVersion = localStorage.getItem('deploy_version');
@@ -22,7 +31,6 @@ export const useAuth = () => {
       console.log('Nova versão detectada, limpando cache...');
       localStorage.clear();
       sessionStorage.clear();
-      // Não fazer signOut aqui para evitar loops
     }
     localStorage.setItem('deploy_version', DEPLOY_VERSION);
 
@@ -49,6 +57,7 @@ export const useAuth = () => {
           if (mounted) {
             setInitializing(false);
             setLoading(false);
+            globalInitializing = false;
           }
           return;
         }
@@ -65,56 +74,68 @@ export const useAuth = () => {
           
           setInitializing(false);
           setLoading(false);
+          globalInitializing = false;
+          globalInitialized = true;
         }
       } catch (error) {
         console.error('Erro na inicialização:', error);
         if (mounted) {
           setInitializing(false);
           setLoading(false);
+          globalInitializing = false;
         }
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-        
-        console.log('Auth state changed:', event, session ? 'com sessão' : 'sem sessão');
-        
-        try {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
-
-          if (event === 'SIGNED_IN' && session?.user) {
-            console.log('Usuário logado, criando perfil se necessário...');
-            await ensureUserProfile(session.user);
-            
-            // Limpar parâmetros OAuth da URL após login bem-sucedido
-            const url = new URL(window.location.href);
-            if (url.searchParams.has('code') || url.searchParams.has('state')) {
-              url.searchParams.delete('code');
-              url.searchParams.delete('state');
-              window.history.replaceState({}, document.title, url.pathname);
-            }
-          }
+    // Configurar listener de mudanças de auth apenas uma vez
+    if (!subscriptionRef.current) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (!mounted) return;
           
-          if (event === 'SIGNED_OUT') {
-            console.log('Usuário deslogado');
-            setSession(null);
-            setUser(null);
+          console.log('Auth state changed:', event, session ? 'com sessão' : 'sem sessão');
+          
+          try {
+            setSession(session);
+            setUser(session?.user ?? null);
+            setLoading(false);
+
+            if (event === 'SIGNED_IN' && session?.user) {
+              console.log('Usuário logado, criando perfil se necessário...');
+              await ensureUserProfile(session.user);
+              
+              // Limpar parâmetros OAuth da URL após login bem-sucedido
+              const url = new URL(window.location.href);
+              if (url.searchParams.has('code') || url.searchParams.has('state')) {
+                url.searchParams.delete('code');
+                url.searchParams.delete('state');
+                window.history.replaceState({}, document.title, url.pathname);
+              }
+            }
+            
+            if (event === 'SIGNED_OUT') {
+              console.log('Usuário deslogado');
+              setSession(null);
+              setUser(null);
+              globalInitialized = false;
+            }
+          } catch (error) {
+            console.error('Erro no processamento de auth state change:', error);
           }
-        } catch (error) {
-          console.error('Erro no processamento de auth state change:', error);
         }
-      }
-    );
+      );
+
+      subscriptionRef.current = subscription;
+    }
 
     initializeAuth();
 
     return () => {
       mounted = false;
-      subscription?.unsubscribe();
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
     };
   }, []);
 
@@ -240,6 +261,7 @@ export const useAuth = () => {
       setUser(null);
       setSession(null);
       setLoading(false);
+      globalInitialized = false;
       
       // Redirecionar para login após logout
       window.location.href = '/login';
