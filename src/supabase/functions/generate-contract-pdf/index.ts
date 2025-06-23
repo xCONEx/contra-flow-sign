@@ -1,13 +1,13 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// @deno-types="https://deno.land/x/puppeteer@16.2.0/vendor/puppeteer-core/puppeteer/types.d.ts"
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -200,18 +200,26 @@ function generateContractHtml(contract: any, options: any): string {
 }
 
 async function generatePdfFromHtml(html: string, options: any): Promise<ArrayBuffer> {
-  // Esta função seria implementada usando Puppeteer ou similar
-  // Por agora, retornamos um placeholder
-  const encoder = new TextEncoder()
-  const htmlBuffer = encoder.encode(html)
-  
-  // Em produção, usar Puppeteer:
-  // const browser = await puppeteer.launch()
-  // const page = await browser.newPage()
-  // await page.setContent(html)
-  // const pdfBuffer = await page.pdf(options)
-  // await browser.close()
-  // return pdfBuffer
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
 
-  return htmlBuffer.buffer
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+  
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    margin: {
+      top: '1in',
+      right: '1in',
+      bottom: '1in',
+      left: '1in',
+    },
+    ...options
+  });
+
+  await browser.close();
+  return pdfBuffer;
 }

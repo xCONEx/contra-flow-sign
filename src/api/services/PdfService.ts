@@ -1,6 +1,5 @@
-
-import { supabase } from '@/lib/supabase';
-import { Contract } from '@/types/api';
+import { supabase } from '../../lib/supabase';
+import { Contract } from '../../types/api';
 
 export class PdfService {
   async generateContractPdf(contractId: string): Promise<string> {

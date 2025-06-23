@@ -1,6 +1,6 @@
 
-import { supabase } from '@/lib/supabase';
-import { Contract, CreateContractRequest, SendContractRequest, SignContractRequest, ContractEvent } from '@/types/api';
+import { supabase } from '../../lib/supabase';
+import { Contract, CreateContractRequest, SendContractRequest, SignContractRequest, ContractEvent } from '../../types/api';
 import { digitalSignatureService } from './DigitalSignatureService';
 import crypto from 'crypto';
 
