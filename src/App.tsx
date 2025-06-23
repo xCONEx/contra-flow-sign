@@ -25,6 +25,8 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
     },
   },
 });
@@ -39,9 +41,9 @@ const LoadingSpinner = () => (
 );
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, initializing } = useAuth();
 
-  if (loading) {
+  if (loading || initializing) {
     return <LoadingSpinner />;
   }
 
@@ -53,9 +55,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, initializing } = useAuth();
 
-  if (loading) {
+  if (loading || initializing) {
     return <LoadingSpinner />;
   }
 
@@ -68,7 +70,9 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   const [showLoadingScreen, setShowLoadingScreen] = useState(() => {
-    return !localStorage.getItem('app_loaded');
+    // Só mostrar a tela de loading inicial se não há parâmetros OAuth na URL
+    const hasOAuthParams = window.location.search.includes('code=') || window.location.search.includes('state=');
+    return !localStorage.getItem('app_loaded') && !hasOAuthParams;
   });
   const { initializing } = useAuth();
 
@@ -77,7 +81,8 @@ const App = () => {
     setShowLoadingScreen(false);
   };
 
-  if (showLoadingScreen || initializing) {
+  // Só mostrar loading screen se não estamos inicializando auth e não há OAuth
+  if (showLoadingScreen && !initializing) {
     return <LoadingScreen onComplete={handleLoadingComplete} />;
   }
 

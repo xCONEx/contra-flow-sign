@@ -5,10 +5,13 @@ import { StatCard } from '@/components/StatCard';
 import { QuickActions } from '@/components/QuickActions';
 import { FileText, Users, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSecurity } from '@/hooks/useSecurity';
 import { supabase } from '@/lib/supabase';
 
 const Index = () => {
   const { user } = useAuth();
+  useSecurity(); // Ativar proteções de segurança
+  
   const [stats, setStats] = useState({
     totalContracts: 0,
     signedContracts: 0,
@@ -23,47 +26,51 @@ const Index = () => {
 
     const fetchData = async () => {
       try {
-        // Fetch contracts count
-        const { count: totalCount } = await supabase
-          .from('contracts')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
+        console.log('Carregando dados do dashboard...');
+        
+        // Fetch contracts count com timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 10000)
+        );
 
-        const { count: signedCount } = await supabase
-          .from('contracts')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'signed');
+        const contractsPromise = Promise.all([
+          supabase.from('contracts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('contracts').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'signed'),
+          supabase.from('contracts').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'sent'),
+          supabase.from('contracts').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'draft')
+        ]);
 
-        const { count: pendingCount } = await supabase
-          .from('contracts')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'sent');
-
-        const { count: draftCount } = await supabase
-          .from('contracts')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'draft');
-
-        // Fetch user profile
-        const { data: profile } = await supabase
+        const profilePromise = supabase
           .from('user_profiles')
           .select('*')
           .eq('id', user.id)
           .single();
 
+        const [contractsData, profileData] = await Promise.race([
+          Promise.all([contractsPromise, profilePromise]),
+          timeoutPromise
+        ]) as any;
+
+        const [totalResult, signedResult, pendingResult, draftResult] = contractsData;
+
         setStats({
-          totalContracts: totalCount || 0,
-          signedContracts: signedCount || 0,
-          pendingContracts: pendingCount || 0,
-          draftContracts: draftCount || 0
+          totalContracts: totalResult.count || 0,
+          signedContracts: signedResult.count || 0,
+          pendingContracts: pendingResult.count || 0,
+          draftContracts: draftResult.count || 0
         });
 
-        setUserProfile(profile);
+        setUserProfile(profileData.data);
+        console.log('Dados carregados com sucesso');
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
+        // Em caso de erro, definir valores padrão
+        setStats({
+          totalContracts: 0,
+          signedContracts: 0,
+          pendingContracts: 0,
+          draftContracts: 0
+        });
       } finally {
         setLoading(false);
       }
@@ -89,8 +96,7 @@ const Index = () => {
   return (
     <Layout>
       <div className="space-y-8">
-        {/* Header */}
-        <div>
+        {/* Header */}        <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-2">
             Bem-vindo, {userProfile?.name || 'Usuário'}

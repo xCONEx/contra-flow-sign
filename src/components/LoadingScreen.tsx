@@ -18,33 +18,42 @@ export const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
           setTimeout(onComplete, 300);
           return 100;
         }
-        return prevProgress + 5;
+        // Acelerar o carregamento
+        return prevProgress + 8;
       });
-    }, 30);
+    }, 25);
 
     return () => clearInterval(timer);
   }, [onComplete]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="text-center space-y-6">
+      <div className="text-center space-y-6 max-w-sm mx-auto px-4">
         {/* Logo */}
         <div className="flex items-center justify-center space-x-3">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-            <FileText className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <FileText className="w-8 h-8 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">ContratPro</h1>
-            <p className="text-gray-600 text-sm">Carregando...</p>
+            <p className="text-gray-600 text-sm">Iniciando aplicação...</p>
           </div>
         </div>
 
         {/* Loading Bar */}
-        <div className="w-64 space-y-3">
-          <Progress value={progress} className="h-2" />
-          <p className="text-xs text-gray-500">
-            {Math.round(progress)}%
+        <div className="w-full space-y-3">
+          <Progress value={progress} className="h-2 bg-gray-200" />
+          <p className="text-xs text-gray-500 font-medium">
+            {Math.round(progress)}% concluído
           </p>
+        </div>
+
+        {/* Loading messages */}
+        <div className="text-xs text-gray-400">
+          {progress < 30 && "Verificando autenticação..."}
+          {progress >= 30 && progress < 60 && "Carregando componentes..."}
+          {progress >= 60 && progress < 90 && "Configurando aplicação..."}
+          {progress >= 90 && "Quase pronto!"}
         </div>
       </div>
     </div>
