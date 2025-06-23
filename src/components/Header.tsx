@@ -4,12 +4,21 @@ import { Bell, Search, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export const Header = () => {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export const Header = ({ onMenuClick }: HeaderProps) => {
   return (
-    <header className="bg-white border-b border-gray-200 h-16">
+    <header className="bg-white border-b border-gray-200 h-16 flex-shrink-0">
       <div className="flex items-center justify-between h-full px-4 lg:px-8">
         {/* Mobile menu button */}
-        <Button variant="ghost" size="sm" className="lg:hidden">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="lg:hidden"
+          onClick={onMenuClick}
+        >
           <Menu className="w-5 h-5" />
         </Button>
         
@@ -33,7 +42,10 @@ export const Header = () => {
             </span>
           </Button>
           
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 hidden sm:flex"
+            onClick={() => window.location.href = '/contracts/new'}
+          >
             Novo Contrato
           </Button>
         </div>

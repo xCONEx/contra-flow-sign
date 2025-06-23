@@ -7,12 +7,14 @@ import {
   BarChart3, 
   Settings, 
   Bell,
-  Home
+  Home,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 const menuItems = [
-  { icon: Home, label: 'Dashboard', href: '/', active: true },
+  { icon: Home, label: 'Dashboard', href: '/' },
   { icon: FileText, label: 'Contratos', href: '/contracts' },
   { icon: Users, label: 'Clientes', href: '/clients' },
   { icon: PlusCircle, label: 'Novo Contrato', href: '/contracts/new' },
@@ -22,6 +24,13 @@ const menuItems = [
 ];
 
 export const Sidebar = () => {
+  const { logout } = useAuth();
+  const currentPath = window.location.pathname;
+
+  const handleNavigation = (href: string) => {
+    window.location.href = href;
+  };
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -43,25 +52,25 @@ export const Sidebar = () => {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {menuItems.map((item) => (
-              <a
+              <button
                 key={item.label}
-                href={item.href}
+                onClick={() => handleNavigation(item.href)}
                 className={cn(
-                  "flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors",
-                  item.active
+                  "w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors text-left",
+                  currentPath === item.href
                     ? "bg-blue-50 text-blue-700 border-r-2 border-blue-600"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 )}
               >
                 <item.icon className="w-5 h-5 mr-3" />
                 {item.label}
-              </a>
+              </button>
             ))}
           </nav>
           
           {/* User section */}
           <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-gray-700">JD</span>
               </div>
@@ -74,6 +83,13 @@ export const Sidebar = () => {
                 </p>
               </div>
             </div>
+            <button
+              onClick={logout}
+              className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair
+            </button>
           </div>
         </div>
       </div>

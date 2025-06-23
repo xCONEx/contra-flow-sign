@@ -46,27 +46,27 @@ const mockContracts = [
 const Index = () => {
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 lg:space-y-8">
         {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-8 text-white">
-          <h1 className="text-3xl font-bold mb-2">Bem-vindo ao ContratPro! 👋</h1>
-          <p className="text-blue-100 text-lg">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 lg:p-8 text-white">
+          <h1 className="text-2xl lg:text-3xl font-bold mb-2">Bem-vindo ao ContratPro! 👋</h1>
+          <p className="text-blue-100 text-base lg:text-lg mb-4">
             Gerencie seus contratos digitais com facilidade e segurança jurídica.
           </p>
-          <div className="flex items-center mt-4 space-x-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5" />
-              <span>Válido juridicamente</span>
+              <span className="text-sm sm:text-base">Válido juridicamente</span>
             </div>
             <div className="flex items-center space-x-2">
               <TrendingUp className="w-5 h-5" />
-              <span>Aumente sua produtividade</span>
+              <span className="text-sm sm:text-base">Aumente sua produtividade</span>
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <StatCard
             title="Total de Contratos"
             value="24"
@@ -94,14 +94,17 @@ const Index = () => {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Contracts Section */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Contratos Recentes</h2>
-              <a href="/contracts" className="text-blue-600 hover:text-blue-700 font-medium">
+              <button 
+                onClick={() => window.location.href = '/contracts'}
+                className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
                 Ver todos
-              </a>
+              </button>
             </div>
             <div className="grid gap-4">
               {mockContracts.map((contract) => (

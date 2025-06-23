@@ -6,35 +6,37 @@ import {
   PlusCircle, 
   UserPlus, 
   FileText, 
-  Send,
-  Users,
-  BarChart3
+  Send
 } from 'lucide-react';
 
 const actions = [
   {
     icon: PlusCircle,
-    title: 'Novo Contrato',
-    description: 'Criar contrato do zero',
+    title: 'Criar',
+    description: 'Novo contrato',
     color: 'bg-blue-600 hover:bg-blue-700',
+    href: '/contracts/new',
   },
   {
     icon: FileText,
-    title: 'Usar Modelo',
-    description: 'Templates prontos',
+    title: 'Modelo',
+    description: 'Usar template',
     color: 'bg-green-600 hover:bg-green-700',
+    href: '/templates',
   },
   {
     icon: UserPlus,
-    title: 'Novo Cliente',
-    description: 'Cadastrar cliente',
+    title: 'Cliente',
+    description: 'Cadastrar novo',
     color: 'bg-purple-600 hover:bg-purple-700',
+    href: '/clients/new',
   },
   {
     icon: Send,
-    title: 'Enviar Contrato',
-    description: 'Enviar para assinatura',
+    title: 'Enviar',
+    description: 'Para assinatura',
     color: 'bg-orange-600 hover:bg-orange-700',
+    href: '/contracts?status=draft',
   },
 ];
 
@@ -47,14 +49,15 @@ export const QuickActions = () => {
           <Button
             key={action.title}
             variant="outline"
-            className="h-auto p-4 flex flex-col items-center space-y-2 hover:border-blue-300"
+            className="h-auto p-3 flex flex-col items-center space-y-2 hover:border-blue-300"
+            onClick={() => window.location.href = action.href}
           >
             <div className={`w-8 h-8 ${action.color} rounded-lg flex items-center justify-center`}>
               <action.icon className="w-4 h-4 text-white" />
             </div>
             <div className="text-center">
-              <p className="font-medium text-sm">{action.title}</p>
-              <p className="text-xs text-gray-500">{action.description}</p>
+              <p className="font-medium text-xs">{action.title}</p>
+              <p className="text-xs text-gray-500 leading-tight">{action.description}</p>
             </div>
           </Button>
         ))}
