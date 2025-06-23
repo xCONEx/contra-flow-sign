@@ -56,6 +56,34 @@ class ContractApiService {
     }
   }
 
+  private async requestPaginated<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<PaginatedResponse<T>> {
+    const url = `${this.baseURL}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(this.authToken && { Authorization: `Bearer ${this.authToken}` }),
+      ...options.headers,
+    };
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('API request failed:', error);
+      throw error;
+    }
+  }
+
   // Contracts endpoints
   async getContracts(params?: {
     page?: number;
@@ -73,7 +101,7 @@ class ContractApiService {
     }
     
     const endpoint = `/contracts${queryParams.toString() ? `?${queryParams}` : ''}`;
-    return this.request<Contract[]>(endpoint);
+    return this.requestPaginated<Contract>(endpoint);
   }
 
   async getContract(id: string): Promise<ApiResponse<Contract>> {
@@ -130,7 +158,7 @@ class ContractApiService {
     }
     
     const endpoint = `/clients${queryParams.toString() ? `?${queryParams}` : ''}`;
-    return this.request<Client[]>(endpoint);
+    return this.requestPaginated<Client>(endpoint);
   }
 
   async createClient(data: Omit<Client, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<Client>> {
@@ -170,7 +198,7 @@ class ContractApiService {
     }
     
     const endpoint = `/notifications${queryParams.toString() ? `?${queryParams}` : ''}`;
-    return this.request<Notification[]>(endpoint);
+    return this.requestPaginated<Notification>(endpoint);
   }
 
   async markNotificationAsRead(id: string): Promise<ApiResponse<void>> {
