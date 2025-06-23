@@ -1,0 +1,654 @@
+
+openapi: 3.0.3
+info:
+  title: ContratPro API
+  description: |
+    API REST para o ContratPro - Plataforma de contratos digitais
+    
+    ## Autenticação
+    Utiliza JWT padrão Supabase no header Authorization: Bearer {token}
+    
+    ## Integração com FinanceFlow
+    - Validação de plano premium antes de criar contratos
+    - Comunicação via API segura
+    - Webhooks para sincronização de status
+    
+  version: 1.0.0
+  contact:
+    name: ContratPro API Support
+    email: api@contratpro.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.contratpro.com/v1
+    description: Produção
+  - url: https://staging-api.contratpro.com/v1
+    description: Staging
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [System]
+      responses:
+        '200':
+          description: Sistema funcionando
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /contracts:
+    get:
+      summary: Listar contratos
+      tags: [Contracts]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, sent, signed, expired, cancelled]
+        - name: client_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de contratos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedContracts'
+
+    post:
+      summary: Criar novo contrato
+      tags: [Contracts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContractRequest'
+      responses:
+        '201':
+          description: Contrato criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractResponse'
+        '402':
+          description: Plano premium necessário
+
+  /contracts/{id}:
+    get:
+      summary: Obter contrato específico
+      tags: [Contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dados do contrato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractResponse'
+
+    put:
+      summary: Atualizar contrato
+      tags: [Contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContractRequest'
+      responses:
+        '200':
+          description: Contrato atualizado
+
+    delete:
+      summary: Excluir contrato
+      tags: [Contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Contrato excluído
+
+  /contracts/{id}/send:
+    post:
+      summary: Enviar contrato para assinatura
+      tags: [Contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendContractRequest'
+      responses:
+        '200':
+          description: Contrato enviado
+
+  /contracts/{id}/sign:
+    post:
+      summary: Assinar contrato
+      tags: [Contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignContractRequest'
+      responses:
+        '200':
+          description: Contrato assinado
+
+  /contracts/{id}/events:
+    get:
+      summary: Obter eventos do contrato
+      tags: [Contracts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de eventos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContractEvent'
+
+  /clients:
+    get:
+      summary: Listar clientes
+      tags: [Clients]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClients'
+
+    post:
+      summary: Criar novo cliente
+      tags: [Clients]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientRequest'
+      responses:
+        '201':
+          description: Cliente criado
+
+  /templates:
+    get:
+      summary: Listar modelos de contrato
+      tags: [Templates]
+      responses:
+        '200':
+          description: Lista de modelos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContractTemplate'
+
+  /templates/{id}:
+    get:
+      summary: Obter modelo específico
+      tags: [Templates]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dados do modelo
+
+  /notifications:
+    get:
+      summary: Listar notificações
+      tags: [Notifications]
+      parameters:
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Lista de notificações
+
+  /integrations/financeflow/validate-plan:
+    post:
+      summary: Validar plano premium no FinanceFlow
+      tags: [Integrations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                finance_flow_user_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Status do plano
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  has_premium:
+                    type: boolean
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Contract:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        content:
+          type: string
+        value:
+          type: number
+        status:
+          type: string
+          enum: [draft, sent, signed, expired, cancelled]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        sent_at:
+          type: string
+          format: date-time
+        signed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        pdf_url:
+          type: string
+        signature_data:
+          $ref: '#/components/schemas/SignatureData'
+
+    SignatureData:
+      type: object
+      properties:
+        signer_name:
+          type: string
+        signer_email:
+          type: string
+        signed_at:
+          type: string
+          format: date-time
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+        geolocation:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+        signature_hash:
+          type: string
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        cpf_cnpj:
+          type: string
+        address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ContractTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        template_content:
+          type: string
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVariable'
+        category:
+          type: string
+          enum: [service, licensing, rights, custom]
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    TemplateVariable:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [text, number, date, select]
+        required:
+          type: boolean
+        options:
+          type: array
+          items:
+            type: string
+
+    ContractEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        contract_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum: [created, sent, viewed, signed, expired, cancelled]
+        description:
+          type: string
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+
+    CreateContractRequest:
+      type: object
+      required:
+        - client_id
+        - title
+        - content
+      properties:
+        client_id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        content:
+          type: string
+        value:
+          type: number
+        variables:
+          type: object
+
+    SendContractRequest:
+      type: object
+      properties:
+        expires_in_days:
+          type: integer
+          default: 30
+        custom_message:
+          type: string
+
+    SignContractRequest:
+      type: object
+      required:
+        - signature_token
+        - signer_data
+      properties:
+        signature_token:
+          type: string
+        signer_data:
+          type: object
+          required:
+            - name
+            - email
+            - ip_address
+            - user_agent
+          properties:
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            ip_address:
+              type: string
+            user_agent:
+              type: string
+            geolocation:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+
+    CreateClientRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        cpf_cnpj:
+          type: string
+        address:
+          type: string
+
+    ContractResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Contract'
+        success:
+          type: boolean
+        message:
+          type: string
+
+    PaginatedContracts:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contract'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        success:
+          type: boolean
+
+    PaginatedClients:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Client'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        success:
+          type: boolean
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    UpdateContractRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        content:
+          type: string
+        value:
+          type: number
+
+  examples:
+    ContractExample:
+      value:
+        id: "123e4567-e89b-12d3-a456-426614174000"
+        user_id: "123e4567-e89b-12d3-a456-426614174001"
+        client_id: "123e4567-e89b-12d3-a456-426614174002"
+        title: "Contrato de Prestação de Serviços"
+        description: "Serviços de design gráfico"
+        content: "Contrato de prestação de serviços..."
+        value: 5000.00
+        status: "draft"
+        created_at: "2024-01-01T10:00:00Z"
+        updated_at: "2024-01-01T10:00:00Z"
