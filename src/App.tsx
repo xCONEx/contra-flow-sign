@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { LoadingScreen } from "@/components/LoadingScreen";
 import { useState, lazy, Suspense, useMemo } from "react";
 
 // Lazy load components
@@ -23,16 +22,16 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-      <p className="text-gray-600 mt-4">Carregando...</p>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+      <p className="text-gray-600 mt-2 text-sm">Carregando...</p>
     </div>
   </div>
 );
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading, initializing } = useAuth();
+  const { isAuthenticated, initializing } = useAuth();
 
-  if (loading || initializing) {
+  if (initializing) {
     return <LoadingSpinner />;
   }
 
@@ -44,9 +43,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading, initializing } = useAuth();
+  const { isAuthenticated, initializing } = useAuth();
 
-  if (loading || initializing) {
+  if (initializing) {
     return <LoadingSpinner />;
   }
 
@@ -58,34 +57,16 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  const [showLoadingScreen, setShowLoadingScreen] = useState(() => {
-    // Só mostrar a tela de loading inicial se não há parâmetros OAuth na URL
-    const hasOAuthParams = window.location.search.includes('code=') || window.location.search.includes('state=');
-    return !localStorage.getItem('app_loaded') && !hasOAuthParams;
-  });
-  const { initializing } = useAuth();
-
-  // Memoizar o QueryClient para evitar recriações
   const queryClient = useMemo(() => new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000, // 10 minutes
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
         retry: 1,
         refetchOnWindowFocus: false,
       },
     },
   }), []);
-
-  const handleLoadingComplete = () => {
-    localStorage.setItem('app_loaded', 'true');
-    setShowLoadingScreen(false);
-  };
-
-  // Só mostrar loading screen se não estamos inicializando auth e não há OAuth
-  if (showLoadingScreen && !initializing) {
-    return <LoadingScreen onComplete={handleLoadingComplete} />;
-  }
 
   return (
     <QueryClientProvider client={queryClient}>

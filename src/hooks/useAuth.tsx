@@ -1,276 +1,173 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User, Session, Provider } from '@supabase/supabase-js';
 
-const DEPLOY_VERSION = '1.0.7';
-
-// Singleton para controlar a inicialização global
-let globalInitialized = false;
-let globalInitializing = false;
-
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
-  const initialized = useRef(false);
-  const subscriptionRef = useRef<any>(null);
+  const mountedRef = useRef(true);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Prevenir múltiplas inicializações
-    if (initialized.current || globalInitialized || globalInitializing) {
-      return;
-    }
+    mountedRef.current = true;
 
-    initialized.current = true;
-    globalInitializing = true;
+    const initAuth = async () => {
+      if (initializedRef.current) return;
+      initializedRef.current = true;
 
-    // Check for version update
-    const lastVersion = localStorage.getItem('deploy_version');
-    if (lastVersion && lastVersion !== DEPLOY_VERSION) {
-      console.log('Nova versão detectada, limpando cache...');
-      localStorage.clear();
-      sessionStorage.clear();
-    }
-    localStorage.setItem('deploy_version', DEPLOY_VERSION);
+      console.log('🔐 Inicializando autenticação...');
 
-    let mounted = true;
-
-    const initializeAuth = async () => {
       try {
-        console.log('Inicializando autenticação...');
-        
-        // Verificar se há um código OAuth na URL
+        // Processar OAuth se presente
         const urlParams = new URLSearchParams(window.location.search);
-        const authCode = urlParams.get('code');
-        
-        if (authCode) {
-          console.log('Código OAuth detectado, processando...');
-          // Limpar a URL sem recarregar a página
-          window.history.replaceState({}, document.title, window.location.pathname);
+        if (urlParams.get('code')) {
+          console.log('🔗 OAuth detectado, limpando URL...');
+          window.history.replaceState({}, '', window.location.pathname);
         }
 
+        // Obter sessão atual
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Erro ao obter sessão:', error);
-          if (mounted) {
-            setInitializing(false);
-            setLoading(false);
-            globalInitializing = false;
-          }
-          return;
+          console.error('❌ Erro ao obter sessão:', error);
         }
-        
-        if (mounted) {
-          console.log('Sessão obtida:', session ? 'ativa' : 'inativa');
+
+        if (mountedRef.current) {
           setSession(session);
           setUser(session?.user ?? null);
+          setInitializing(false);
           
-          // Se há sessão e usuário, garantir que o perfil existe
           if (session?.user) {
-            await ensureUserProfile(session.user);
+            await createUserProfile(session.user);
           }
-          
-          setInitializing(false);
-          setLoading(false);
-          globalInitializing = false;
-          globalInitialized = true;
         }
+
+        console.log('✅ Autenticação inicializada:', session ? 'logado' : 'não logado');
+
       } catch (error) {
-        console.error('Erro na inicialização:', error);
-        if (mounted) {
+        console.error('❌ Erro na inicialização:', error);
+        if (mountedRef.current) {
           setInitializing(false);
-          setLoading(false);
-          globalInitializing = false;
         }
       }
     };
 
-    // Configurar listener de mudanças de auth apenas uma vez
-    if (!subscriptionRef.current) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (!mounted) return;
-          
-          console.log('Auth state changed:', event, session ? 'com sessão' : 'sem sessão');
-          
-          try {
-            setSession(session);
-            setUser(session?.user ?? null);
-            setLoading(false);
+    // Listener para mudanças de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔄 Auth mudou:', event);
+        
+        if (mountedRef.current) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
 
-            if (event === 'SIGNED_IN' && session?.user) {
-              console.log('Usuário logado, criando perfil se necessário...');
-              await ensureUserProfile(session.user);
-              
-              // Limpar parâmetros OAuth da URL após login bem-sucedido
-              const url = new URL(window.location.href);
-              if (url.searchParams.has('code') || url.searchParams.has('state')) {
-                url.searchParams.delete('code');
-                url.searchParams.delete('state');
-                window.history.replaceState({}, document.title, url.pathname);
-              }
-            }
-            
-            if (event === 'SIGNED_OUT') {
-              console.log('Usuário deslogado');
-              setSession(null);
-              setUser(null);
-              globalInitialized = false;
-            }
-          } catch (error) {
-            console.error('Erro no processamento de auth state change:', error);
+          if (event === 'SIGNED_IN' && session?.user) {
+            await createUserProfile(session.user);
           }
         }
-      );
+      }
+    );
 
-      subscriptionRef.current = subscription;
-    }
-
-    initializeAuth();
+    initAuth();
 
     return () => {
-      mounted = false;
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-        subscriptionRef.current = null;
-      }
+      mountedRef.current = false;
+      subscription.unsubscribe();
     };
   }, []);
 
-  const ensureUserProfile = async (user: User) => {
+  const createUserProfile = async (user: User) => {
     try {
-      console.log('Verificando perfil do usuário:', user.id);
-      
-      const { data: existingProfile, error: fetchError } = await supabase
+      const { data: existing } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('id', user.id)
-        .maybeSingle();
+        .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Erro ao buscar perfil:', fetchError);
-        return;
-      }
-
-      if (!existingProfile) {
-        console.log('Criando novo perfil para o usuário');
-        const profileData = {
-          id: user.id,
-          name: user.user_metadata?.name || 
-                user.user_metadata?.full_name || 
-                user.email?.split('@')[0] || 
-                'Usuário',
-          email: user.email!,
-          phone: user.user_metadata?.phone || '',
-          company_name: user.user_metadata?.company || '',
-          avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
-          has_contratpro: false,
-          contracts_count: 0,
-          contracts_limit: 5
-        };
-
-        const { error: insertError } = await supabase
+      if (!existing) {
+        const { error } = await supabase
           .from('user_profiles')
-          .upsert(profileData, { onConflict: 'id' });
-          
-        if (insertError) {
-          console.error('Erro ao criar perfil:', insertError);
+          .insert({
+            id: user.id,
+            name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
+            email: user.email!,
+            phone: user.user_metadata?.phone || '',
+            company_name: user.user_metadata?.company || '',
+            avatar_url: user.user_metadata?.avatar_url || '',
+            has_contratpro: false,
+            contracts_count: 0,
+            contracts_limit: 5
+          });
+
+        if (error) {
+          console.error('Erro ao criar perfil:', error);
         } else {
-          console.log('Perfil criado com sucesso');
+          console.log('✅ Perfil criado');
         }
       }
     } catch (error) {
-      console.error('Erro ao criar perfil:', error);
+      console.error('Erro ao verificar perfil:', error);
     }
   };
 
   const signUp = async (email: string, password: string, userData?: { name?: string }) => {
     setLoading(true);
     
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: userData || {}
-        }
-      });
-      
-      setLoading(false);
-      return { data, error };
-    } catch (error) {
-      setLoading(false);
-      return { data: null, error };
-    }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: userData || {} }
+    });
+    
+    setLoading(false);
+    return { data, error };
   };
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      setLoading(false);
-      return { data, error };
-    } catch (error) {
-      setLoading(false);
-      return { data: null, error };
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    setLoading(false);
+    return { data, error };
   };
 
   const signInWithProvider = async (provider: Provider) => {
     setLoading(true);
     
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
-        }
-      });
-      
-      setLoading(false);
-      return { data, error };
-    } catch (error) {
-      setLoading(false);
-      return { data: null, error };
-    }
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/`
+      }
+    });
+    
+    setLoading(false);
+    return { data, error };
   };
 
   const signOut = async () => {
     setLoading(true);
     
-    try {
-      console.log('Fazendo logout...');
-      
-      // Limpar storage local
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      const { error } = await supabase.auth.signOut();
-      
-      setUser(null);
-      setSession(null);
-      setLoading(false);
-      globalInitialized = false;
-      
-      // Redirecionar para login após logout
-      window.location.href = '/login';
-      
-      return { error };
-    } catch (error) {
-      setLoading(false);
-      return { error };
-    }
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    const { error } = await supabase.auth.signOut();
+    
+    setUser(null);
+    setSession(null);
+    setLoading(false);
+    
+    window.location.href = '/login';
+    
+    return { error };
   };
 
   const resetPassword = async (email: string) => {
