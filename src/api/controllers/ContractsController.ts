@@ -7,10 +7,10 @@ import { Contract, CreateContractRequest, SendContractRequest } from '../../type
 import { AuthenticatedRequest } from '../middleware/auth';
 
 export class ContractsController {
-  async getContracts(req: AuthenticatedRequest, res: Response) {
+  async getContracts(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { page = 1, limit = 20, status, client_id } = req.query;
-      const userId = req.user?.id;
+      const userId = req.user?.id!;
 
       const result = await contractsService.getContracts({
         userId,
@@ -34,18 +34,19 @@ export class ContractsController {
     }
   }
 
-  async getContract(req: AuthenticatedRequest, res: Response) {
+  async getContract(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = req.user?.id!;
 
       const contract = await contractsService.getContractById(id, userId);
 
       if (!contract) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Contrato não encontrado',
         });
+        return;
       }
 
       res.json({
@@ -61,18 +62,19 @@ export class ContractsController {
     }
   }
 
-  async createContract(req: AuthenticatedRequest, res: Response) {
+  async createContract(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.id!;
       const contractData: CreateContractRequest = req.body;
 
       // Validar plano premium antes de criar contrato
       const hasValidPlan = await contractsService.validatePremiumPlan(userId);
       if (!hasValidPlan) {
-        return res.status(402).json({
+        res.status(402).json({
           success: false,
           message: 'Plano premium necessário para criar contratos',
         });
+        return;
       }
 
       const contract = await contractsService.createContract({
@@ -97,19 +99,20 @@ export class ContractsController {
     }
   }
 
-  async updateContract(req: AuthenticatedRequest, res: Response) {
+  async updateContract(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = req.user?.id!;
       const updateData = req.body;
 
       const contract = await contractsService.updateContract(id, userId, updateData);
 
       if (!contract) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Contrato não encontrado',
         });
+        return;
       }
 
       // Regenerar PDF se o conteúdo foi alterado
@@ -131,19 +134,20 @@ export class ContractsController {
     }
   }
 
-  async sendContract(req: AuthenticatedRequest, res: Response) {
+  async sendContract(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = req.user?.id!;
       const sendData: SendContractRequest = req.body;
 
       const contract = await contractsService.sendContract(id, userId, sendData);
 
       if (!contract) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Contrato não encontrado',
         });
+        return;
       }
 
       // Enviar webhook para FinanceFlow
@@ -163,7 +167,7 @@ export class ContractsController {
     }
   }
 
-  async signContract(req: AuthenticatedRequest, res: Response) {
+  async signContract(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const signData = req.body;
@@ -171,10 +175,11 @@ export class ContractsController {
       const contract = await contractsService.signContract(id, signData);
 
       if (!contract) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Contrato não encontrado ou token inválido',
         });
+        return;
       }
 
       // Enviar webhook para FinanceFlow
@@ -194,18 +199,19 @@ export class ContractsController {
     }
   }
 
-  async deleteContract(req: AuthenticatedRequest, res: Response) {
+  async deleteContract(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = req.user?.id!;
 
       const deleted = await contractsService.deleteContract(id, userId);
 
       if (!deleted) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Contrato não encontrado',
         });
+        return;
       }
 
       res.status(204).send();
@@ -218,10 +224,10 @@ export class ContractsController {
     }
   }
 
-  async getContractEvents(req: AuthenticatedRequest, res: Response) {
+  async getContractEvents(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = req.user?.id!;
 
       const events = await contractsService.getContractEvents(id, userId);
 

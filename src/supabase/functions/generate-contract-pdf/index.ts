@@ -5,21 +5,21 @@ import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { contract, options } = await req.json()
+    const { contract, options } = await req.json();
 
     // Gerar HTML do contrato
-    const html = generateContractHtml(contract, options)
+    const html = generateContractHtml(contract, options);
 
     // Converter para PDF usando Puppeteer
-    const pdfBuffer = await generatePdfFromHtml(html, options)
+    const pdfBuffer = await generatePdfFromHtml(html, options);
 
     return new Response(JSON.stringify({ 
       pdf: Array.from(new Uint8Array(pdfBuffer)),
@@ -29,9 +29,9 @@ Deno.serve(async (req) => {
         ...corsHeaders, 
         'Content-Type': 'application/json' 
       },
-    })
+    });
   } catch (error) {
-    console.error('Error generating PDF:', error)
+    console.error('Error generating PDF:', error);
     return new Response(JSON.stringify({ 
       error: error.message,
       success: false 
@@ -41,9 +41,9 @@ Deno.serve(async (req) => {
         ...corsHeaders, 
         'Content-Type': 'application/json' 
       },
-    })
+    });
   }
-})
+});
 
 function generateContractHtml(contract: any, options: any): string {
   return `
@@ -196,7 +196,7 @@ function generateContractHtml(contract: any, options: any): string {
       </div>
     </body>
     </html>
-  `
+  `;
 }
 
 async function generatePdfFromHtml(html: string, options: any): Promise<ArrayBuffer> {
