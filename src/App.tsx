@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useState, lazy, Suspense, useMemo } from "react";
 
 // Lazy load components
@@ -56,6 +56,90 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const AppRoutes = () => {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contracts"
+            element={
+              <ProtectedRoute>
+                <Contracts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clients"
+            element={
+              <ProtectedRoute>
+                <Clients />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contracts/new"
+            element={
+              <ProtectedRoute>
+                <NewContract />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clients/new"
+            element={
+              <ProtectedRoute>
+                <NewClient />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+};
+
 const App = () => {
   const queryClient = useMemo(() => new QueryClient({
     defaultOptions: {
@@ -73,85 +157,9 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
-              <Route
-                path="/login"
-                element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/contracts"
-                element={
-                  <ProtectedRoute>
-                    <Contracts />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clients"
-                element={
-                  <ProtectedRoute>
-                    <Clients />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <ProtectedRoute>
-                    <Reports />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/contracts/new"
-                element={
-                  <ProtectedRoute>
-                    <NewContract />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clients/new"
-                element={
-                  <ProtectedRoute>
-                    <NewClient />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/notifications"
-                element={
-                  <ProtectedRoute>
-                    <Notifications />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -1,73 +1,86 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User, Session, Provider } from '@supabase/supabase-js';
 
-export const useAuth = () => {
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  initializing: boolean;
+  isAuthenticated: boolean;
+  signUp: (email: string, password: string, userData?: { name?: string }) => Promise<any>;
+  signIn: (email: string, password: string) => Promise<any>;
+  signInWithProvider: (provider: Provider) => Promise<any>;
+  signOut: () => Promise<any>;
+  resetPassword: (email: string) => Promise<any>;
+  updatePassword: (password: string) => Promise<any>;
+  updateProfile: (updates: any) => Promise<any>;
+  getUserProfile: () => Promise<any>;
+  incrementContractCount: () => Promise<any>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Flag global para evitar múltiplas inicializações
+let isInitialized = false;
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
-  const mountedRef = useRef(true);
-  const initializedRef = useRef(false);
 
   useEffect(() => {
-    mountedRef.current = true;
+    if (isInitialized) return;
+    isInitialized = true;
+
+    console.log('🔐 Inicializando sistema de autenticação...');
 
     const initAuth = async () => {
-      if (initializedRef.current) return;
-      initializedRef.current = true;
-
-      console.log('🔐 Inicializando autenticação...');
-
       try {
-        // Processar OAuth se presente
+        // Limpar parâmetros OAuth da URL se existirem
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('code')) {
-          console.log('🔗 OAuth detectado, limpando URL...');
+        if (urlParams.get('code') || urlParams.get('access_token')) {
+          console.log('🔗 Limpando parâmetros OAuth da URL...');
           window.history.replaceState({}, '', window.location.pathname);
         }
 
         // Obter sessão atual
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (error) {
+        if (error && !error.message.includes('Invalid Refresh Token')) {
           console.error('❌ Erro ao obter sessão:', error);
         }
 
-        if (mountedRef.current) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setInitializing(false);
-          
-          if (session?.user) {
-            await createUserProfile(session.user);
-          }
+        console.log('📋 Sessão obtida:', session ? 'ativa' : 'inativa');
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await createUserProfile(session.user);
         }
-
-        console.log('✅ Autenticação inicializada:', session ? 'logado' : 'não logado');
 
       } catch (error) {
-        console.error('❌ Erro na inicialização:', error);
-        if (mountedRef.current) {
-          setInitializing(false);
-        }
+        console.error('❌ Erro na inicialização da autenticação:', error);
+      } finally {
+        setInitializing(false);
+        console.log('✅ Sistema de autenticação inicializado');
       }
     };
 
-    // Listener para mudanças de auth
+    // Configurar listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 Auth mudou:', event);
+        console.log('🔄 Mudança de autenticação:', event);
         
-        if (mountedRef.current) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
 
-          if (event === 'SIGNED_IN' && session?.user) {
-            await createUserProfile(session.user);
-          }
+        if (event === 'SIGNED_IN' && session?.user) {
+          await createUserProfile(session.user);
         }
       }
     );
@@ -75,7 +88,6 @@ export const useAuth = () => {
     initAuth();
 
     return () => {
-      mountedRef.current = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -106,7 +118,7 @@ export const useAuth = () => {
         if (error) {
           console.error('Erro ao criar perfil:', error);
         } else {
-          console.log('✅ Perfil criado');
+          console.log('✅ Perfil de usuário criado');
         }
       }
     } catch (error) {
@@ -235,7 +247,7 @@ export const useAuth = () => {
     return { data, error };
   };
 
-  return {
+  const value = {
     user,
     session,
     loading,
@@ -251,4 +263,18 @@ export const useAuth = () => {
     getUserProfile,
     incrementContractCount
   };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
 };

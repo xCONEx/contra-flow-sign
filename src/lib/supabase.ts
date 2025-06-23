@@ -12,18 +12,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
+    detectSessionInUrl: false, // Desabilitar detecção automática para evitar conflitos
     flowType: 'pkce'
   }
 });
 
-// Verificar conexão simples
-supabase.auth.getSession().then(({ error }) => {
-  if (error && !error.message.includes('Invalid Refresh Token')) {
-    console.error('Erro na conexão com Supabase:', error);
-  } else {
-    console.log('✅ Supabase conectado');
-  }
-}).catch(err => {
-  console.error('❌ Erro ao conectar Supabase:', err);
-});
+// Log de inicialização simples
+console.log('✅ Supabase configurado');
