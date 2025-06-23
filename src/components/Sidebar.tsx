@@ -24,11 +24,20 @@ const menuItems = [
 ];
 
 export const Sidebar = () => {
-  const { logout } = useAuth();
+  const { signOut, user } = useAuth();
   const currentPath = window.location.pathname;
 
   const handleNavigation = (href: string) => {
     window.location.href = href;
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
   };
 
   return (
@@ -72,11 +81,13 @@ export const Sidebar = () => {
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-700">JD</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {user?.user_metadata?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  João Designer
+                  {user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário'}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   Plano Gratuito
@@ -84,7 +95,7 @@ export const Sidebar = () => {
               </div>
             </div>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4 mr-2" />

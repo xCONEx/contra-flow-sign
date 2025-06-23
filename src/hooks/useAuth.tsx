@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { User, Session, Provider } from '@supabase/supabase-js';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -58,9 +58,9 @@ export const useAuth = () => {
           .from('user_profiles')
           .insert({
             id: user.id,
-            name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
+            name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário',
             email: user.email!,
-            plan_type: 'free'
+            has_contratpro: false
           });
 
         if (insertError) {
@@ -93,6 +93,20 @@ export const useAuth = () => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
+    });
+
+    setLoading(false);
+    return { data, error };
+  };
+
+  const signInWithProvider = async (provider: Provider) => {
+    setLoading(true);
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/`
+      }
     });
 
     setLoading(false);
@@ -161,6 +175,7 @@ export const useAuth = () => {
     isAuthenticated: !!user,
     signUp,
     signIn,
+    signInWithProvider,
     signOut,
     resetPassword,
     updatePassword,
