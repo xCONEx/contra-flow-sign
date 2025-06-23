@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User, Session, Provider } from '@supabase/supabase-js';
@@ -11,15 +10,21 @@ export const useAuth = () => {
   useEffect(() => {
     // Buscar sessão atual
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Erro ao buscar sessão:', error);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Erro ao buscar sessão:', error);
+        }
+        
+        console.log('Initial session:', session);
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Erro na inicialização da sessão:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
     };
 
     getInitialSession();
@@ -27,7 +32,7 @@ export const useAuth = () => {
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session);
+        console.log('Auth state changed:', event, session?.user?.id);
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -45,26 +50,41 @@ export const useAuth = () => {
 
   const ensureUserProfile = async (user: User) => {
     try {
+      console.log('Verificando perfil do usuário:', user.id);
+      
       // Verificar se o perfil já existe
       const { data: existingProfile, error: fetchError } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (fetchError && fetchError.code === 'PGRST116') {
-        // Perfil não existe, criar um novo
+      console.log('Perfil existente:', existingProfile, 'Erro:', fetchError);
+
+      // Se não existe perfil, criar um novo
+      if (!existingProfile && (!fetchError || fetchError.code === 'PGRST116')) {
+        console.log('Criando novo perfil para:', user.id);
+        
+        const profileData = {
+          id: user.id,
+          name: user.user_metadata?.name || 
+                user.user_metadata?.full_name || 
+                user.email?.split('@')[0] || 
+                'Usuário',
+          email: user.email!,
+          has_contratpro: false
+        };
+
+        console.log('Dados do perfil:', profileData);
+
         const { error: insertError } = await supabase
           .from('user_profiles')
-          .insert({
-            id: user.id,
-            name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário',
-            email: user.email!,
-            has_contratpro: false
-          });
+          .insert(profileData);
 
         if (insertError) {
           console.error('Erro ao criar perfil do usuário:', insertError);
+        } else {
+          console.log('Perfil criado com sucesso');
         }
       }
     } catch (error) {
@@ -75,56 +95,95 @@ export const useAuth = () => {
   const signUp = async (email: string, password: string, userData?: { name?: string }) => {
     setLoading(true);
     
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userData
-      }
-    });
+    try {
+      console.log('Iniciando cadastro para:', email);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData || {}
+        }
+      });
 
-    setLoading(false);
-    return { data, error };
+      console.log('Resultado do cadastro:', data, error);
+      
+      setLoading(false);
+      return { data, error };
+    } catch (error) {
+      console.error('Erro no cadastro:', error);
+      setLoading(false);
+      return { data: null, error };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    try {
+      console.log('Iniciando login para:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-    setLoading(false);
-    return { data, error };
+      console.log('Resultado do login:', data?.user?.id, error);
+      
+      setLoading(false);
+      return { data, error };
+    } catch (error) {
+      console.error('Erro no login:', error);
+      setLoading(false);
+      return { data: null, error };
+    }
   };
 
   const signInWithProvider = async (provider: Provider) => {
     setLoading(true);
     
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/`
-      }
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
 
-    setLoading(false);
-    return { data, error };
+      console.log('Login com provider:', provider, data, error);
+      
+      setLoading(false);
+      return { data, error };
+    } catch (error) {
+      console.error('Erro no login com provider:', error);
+      setLoading(false);
+      return { data: null, error };
+    }
   };
 
   const signOut = async () => {
     setLoading(true);
     
-    const { error } = await supabase.auth.signOut();
-    
-    if (!error) {
-      setUser(null);
-      setSession(null);
+    try {
+      console.log('Iniciando logout');
+      
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Erro no logout:', error);
+      } else {
+        console.log('Logout realizado com sucesso');
+        setUser(null);
+        setSession(null);
+      }
+      
+      setLoading(false);
+      return { error };
+    } catch (error) {
+      console.error('Erro inesperado no logout:', error);
+      setLoading(false);
+      return { error };
     }
-    
-    setLoading(false);
-    return { error };
   };
 
   const resetPassword = async (email: string) => {
