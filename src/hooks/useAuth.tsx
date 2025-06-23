@@ -1,6 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User, Session, Provider } from '@supabase/supabase-js';
+
+// Versão do deploy para forçar logout em atualizações
+const DEPLOY_VERSION = '1.0.2';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -8,51 +12,81 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Buscar sessão atual
-    const getInitialSession = async () => {
+    // Verificar se houve atualização do deploy
+    const lastVersion = localStorage.getItem('deploy_version');
+    if (lastVersion && lastVersion !== DEPLOY_VERSION) {
+      console.log('Nova versão detectada, forçando logout...');
+      localStorage.clear();
+      sessionStorage.clear();
+      supabase.auth.signOut();
+    }
+    localStorage.setItem('deploy_version', DEPLOY_VERSION);
+
+    let mounted = true;
+
+    const initializeAuth = async () => {
       try {
+        console.log('Inicializando autenticação...');
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Erro ao buscar sessão:', error);
         }
         
-        console.log('Initial session:', session);
-        setSession(session);
-        setUser(session?.user ?? null);
+        if (mounted) {
+          console.log('Initial session:', session?.user?.id || 'null');
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Erro na inicialização da sessão:', error);
-      } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    getInitialSession();
+    initializeAuth();
 
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
+        if (!mounted) return;
+        
+        console.log('Auth state changed:', event, session?.user?.id || 'null');
         
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
+        
+        if (event === 'SIGNED_OUT') {
+          setLoading(false);
+        }
 
         // Criar perfil do usuário se for um novo registro
         if (event === 'SIGNED_IN' && session?.user) {
           await ensureUserProfile(session.user);
+          setLoading(false);
+        }
+
+        if (event === 'INITIAL_SESSION') {
+          setLoading(false);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const ensureUserProfile = async (user: User) => {
     try {
       console.log('Verificando perfil do usuário:', user.id);
       
-      // Verificar se o perfil já existe
+      // Usar RPC ou função que bypass RLS ou ajustar para usar auth.uid()
       const { data: existingProfile, error: fetchError } = await supabase
         .from('user_profiles')
         .select('id')
@@ -61,7 +95,6 @@ export const useAuth = () => {
 
       console.log('Perfil existente:', existingProfile, 'Erro:', fetchError);
 
-      // Se não existe perfil, criar um novo
       if (!existingProfile && (!fetchError || fetchError.code === 'PGRST116')) {
         console.log('Criando novo perfil para:', user.id);
         
@@ -77,12 +110,27 @@ export const useAuth = () => {
 
         console.log('Dados do perfil:', profileData);
 
+        // Usar upsert para evitar problemas de RLS
         const { error: insertError } = await supabase
           .from('user_profiles')
-          .insert(profileData);
+          .upsert(profileData, { onConflict: 'id' })
+          .select()
+          .single();
 
         if (insertError) {
           console.error('Erro ao criar perfil do usuário:', insertError);
+          // Tentar novamente com insert simples após um delay
+          setTimeout(async () => {
+            const { error: retryError } = await supabase
+              .from('user_profiles')
+              .insert(profileData);
+            
+            if (retryError) {
+              console.error('Erro na segunda tentativa de criar perfil:', retryError);
+            } else {
+              console.log('Perfil criado na segunda tentativa');
+            }
+          }, 1000);
         } else {
           console.log('Perfil criado com sucesso');
         }
@@ -166,6 +214,10 @@ export const useAuth = () => {
     
     try {
       console.log('Iniciando logout');
+      
+      // Limpar storage local
+      localStorage.clear();
+      sessionStorage.clear();
       
       const { error } = await supabase.auth.signOut();
       

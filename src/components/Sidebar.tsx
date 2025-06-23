@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const menuItems = [
   { icon: Home, label: 'Dashboard', href: '/' },
@@ -25,18 +26,23 @@ const menuItems = [
 
 export const Sidebar = () => {
   const { signOut, user } = useAuth();
+  const navigate = useNavigate();
   const currentPath = window.location.pathname;
 
   const handleNavigation = (href: string) => {
-    window.location.href = href;
+    navigate(href);
   };
 
   const handleLogout = async () => {
     try {
+      console.log('Tentando fazer logout...');
       await signOut();
-      window.location.href = '/login';
+      console.log('Logout concluído, redirecionando...');
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
+      // Forçar redirecionamento mesmo com erro
+      navigate('/login', { replace: true });
     }
   };
 
