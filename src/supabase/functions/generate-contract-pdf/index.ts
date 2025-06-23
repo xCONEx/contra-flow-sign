@@ -1,5 +1,5 @@
 
-// @deno-types="https://deno.land/x/puppeteer@16.2.0/vendor/puppeteer-core/puppeteer/types.d.ts"
+/// <reference types="https://deno.land/x/puppeteer@16.2.0/vendor/puppeteer-core/puppeteer/types.d.ts" />
 import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('Error generating PDF:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: (error as Error).message,
       success: false 
     }), {
       status: 500,
