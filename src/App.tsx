@@ -12,6 +12,13 @@ import { OAuthCallback } from "@/components/OAuthCallback";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Contracts from "./pages/Contracts";
+import NewContract from "./pages/NewContract";
+import Clients from "./pages/Clients";
+import Pending from "./pages/Pending";
+import Signed from "./pages/Signed";
+import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,12 +56,68 @@ const App = () => (
               {/* Rota específica para callback do OAuth - sempre acessível */}
               <Route path="/auth/callback" element={<OAuthCallback />} />
               
-              {/* Rota protegida do dashboard */}
+              {/* Rotas protegidas */}
               <Route 
                 path="/dashboard" 
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/contracts" 
+                element={
+                  <ProtectedRoute>
+                    <Contracts />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/contracts/new" 
+                element={
+                  <ProtectedRoute>
+                    <NewContract />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/clients" 
+                element={
+                  <ProtectedRoute>
+                    <Clients />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pending" 
+                element={
+                  <ProtectedRoute>
+                    <Pending />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/signed" 
+                element={
+                  <ProtectedRoute>
+                    <Signed />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/analytics" 
+                element={
+                  <ProtectedRoute>
+                    <Analytics />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute>
+                    <Settings />
                   </ProtectedRoute>
                 } 
               />

@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlans } from "@/contexts/PlansContext";
 import { Button } from "@/components/ui/button";
@@ -45,50 +45,43 @@ const menuItems = [
     id: "dashboard",
     label: "Dashboard",
     url: "/dashboard",
-    icon: Home,
-    count: null
+    icon: Home
   },
   {
     id: "contracts",
     label: "Contratos",
     url: "/contracts",
-    icon: FileText,
-    count: 12
+    icon: FileText
   },
   {
     id: "clients",
     label: "Clientes", 
     url: "/clients",
-    icon: Users,
-    count: 28
+    icon: Users
   },
   {
     id: "pending",
     label: "Pendentes",
     url: "/pending",
-    icon: Clock,
-    count: 5
+    icon: Clock
   },
   {
     id: "signed",
     label: "Assinados",
     url: "/signed", 
-    icon: CheckCircle,
-    count: 47
+    icon: CheckCircle
   },
   {
     id: "analytics",
     label: "Relatórios",
     url: "/analytics",
-    icon: BarChart3,
-    count: null
+    icon: BarChart3
   },
   {
     id: "settings",
     label: "Configurações",
     url: "/settings",
-    icon: Settings,
-    count: null
+    icon: Settings
   }
 ];
 
@@ -96,7 +89,9 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const { currentPlan, plans, canCreateContract, getRemainingContracts } = usePlans();
   const location = useLocation();
-  const { state } = useSidebar();
+  const navigate = useNavigate();
+  const { state, setOpenMobile } = useSidebar();
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   
   const currentPlanDetails = plans.find(plan => plan.id === currentPlan.planType);
   const remainingContracts = getRemainingContracts();
@@ -104,15 +99,19 @@ export function AppSidebar() {
 
   const handleCreateContract = () => {
     if (!canCreateContract) {
-      // Mostrar modal de upgrade
+      setUpgradeModalOpen(true);
       return;
     }
-    // Lógica para criar contrato
-    console.log("Criar novo contrato");
+    navigate("/contracts/new");
+    setOpenMobile(false); // Fecha sidebar no mobile após navegação
   };
 
   const handleSignOut = () => {
     signOut();
+  };
+
+  const handleNavigation = () => {
+    setOpenMobile(false); // Fecha sidebar no mobile após navegação
   };
 
   const getPlanBadgeColor = () => {
@@ -128,11 +127,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="border-b p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 flex-shrink-0">
             <FileText className="h-4 w-4 text-white" />
           </div>
           {!isCollapsed && (
-            <span className="text-lg font-bold text-gray-900">ContratPro</span>
+            <span className="text-lg font-bold text-gray-900 truncate">ContratPro</span>
           )}
         </div>
       </SidebarHeader>
@@ -147,10 +146,10 @@ export function AppSidebar() {
             }`}
             disabled={!canCreateContract}
           >
-            <PlusCircle className="h-4 w-4" />
+            <PlusCircle className="h-4 w-4 flex-shrink-0" />
             {!isCollapsed && <span className="ml-2">Novo Contrato</span>}
             {!canCreateContract && !isCollapsed && (
-              <AlertTriangle className="h-4 w-4 ml-2 text-yellow-400" />
+              <AlertTriangle className="h-4 w-4 ml-2 text-yellow-400 flex-shrink-0" />
             )}
           </Button>
           
@@ -175,18 +174,13 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <NavLink to={item.url} className="flex items-center gap-3">
-                        <Icon className="h-4 w-4" />
-                        {!isCollapsed && (
-                          <>
-                            <span>{item.label}</span>
-                            {item.count && (
-                              <Badge variant="secondary" className="ml-auto">
-                                {item.count}
-                              </Badge>
-                            )}
-                          </>
-                        )}
+                      <NavLink 
+                        to={item.url} 
+                        className="flex items-center gap-3"
+                        onClick={handleNavigation}
+                      >
+                        <Icon className="h-4 w-4 flex-shrink-0" />
+                        {!isCollapsed && <span className="truncate">{item.label}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -202,13 +196,13 @@ export function AppSidebar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="w-full justify-start p-2 h-auto">
-                <div className="flex items-center gap-3 w-full">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
+                <div className="flex items-center gap-3 w-full min-w-0">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 flex-shrink-0">
                     <span className="text-xs font-semibold text-white">
                       {user?.user_metadata?.name?.[0] || user?.email?.[0] || 'U'}
                     </span>
                   </div>
-                  <div className="flex-1 text-left">
+                  <div className="flex-1 text-left min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário'}
                     </p>
@@ -220,7 +214,7 @@ export function AppSidebar() {
                         {currentPlanDetails?.name}
                       </Badge>
                       {currentPlan.planType === 'premium' && (
-                        <Crown className="h-3 w-3 text-yellow-500" />
+                        <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />
                       )}
                     </div>
                   </div>
@@ -228,7 +222,7 @@ export function AppSidebar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Perfil</span>
               </DropdownMenuItem>
@@ -263,7 +257,7 @@ export function AppSidebar() {
                 </Badge>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Perfil</span>
               </DropdownMenuItem>
