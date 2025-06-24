@@ -8,8 +8,6 @@ import {
   Users, 
   BarChart3, 
   Settings, 
-  Menu, 
-  X,
   Home,
   PlusCircle,
   Clock,
@@ -48,6 +46,7 @@ import { useContracts } from "@/hooks/useContracts";
 import { useClients } from "@/hooks/useClients";
 import { usePlans } from "@/contexts/PlansContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useStableData } from "@/hooks/useStableData";
 
 export const AppSidebar = () => {
   const location = useLocation();
@@ -59,8 +58,13 @@ export const AppSidebar = () => {
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
 
-  const pendingContracts = contracts.filter(c => c.status === 'draft' || c.status === 'sent');
-  const signedContracts = contracts.filter(c => c.status === 'signed');
+  // Use stable data to prevent constant recalculation
+  const stableContracts = useStableData(contracts, 'contracts');
+  const stableClients = useStableData(clients, 'clients');
+
+  // Memoizar os valores para evitar recálculo constante
+  const pendingContracts = stableContracts.filter(c => c.status === 'draft' || c.status === 'sent');
+  const signedContracts = stableContracts.filter(c => c.status === 'signed');
 
   // Get current plan details
   const currentPlanDetails = plans.find(plan => plan.id === currentPlan.planType);
@@ -100,14 +104,14 @@ export const AppSidebar = () => {
       label: "Contratos",
       icon: FileText,
       url: "/contracts",
-      count: contracts.length
+      count: stableContracts.length
     },
     {
       id: "clients",
       label: "Clientes",
       icon: Users,
       url: "/clients",
-      count: clients.length
+      count: stableClients.length
     },
     {
       id: "pending",
@@ -286,7 +290,7 @@ export const AppSidebar = () => {
         </SidebarFooter>
       </Sidebar>
 
-      {/* Dialogs */}
+      {/* User Profile Dialog */}
       <UserProfileDialog
         open={profileDialogOpen}
         onOpenChange={setProfileDialogOpen}
@@ -301,18 +305,16 @@ export function AppSidebarProvider({ children }: { children: React.ReactNode }) 
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 overflow-hidden">
-          {/* Mobile Header */}
-          <div className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+          {/* Header mobile simplificado - sem duplicação */}
+          <div className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-40">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <FileText className="w-4 h-4 text-white" />
+              <SidebarTrigger />
+              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                <FileText className="w-3 h-3 text-white" />
               </div>
-              <span className="font-bold text-xl text-gray-900">ContratPro</span>
+              <span className="font-bold text-lg text-gray-900">ContratPro</span>
             </div>
-            <div className="flex items-center gap-2">
-              <NotificationPanel />
-              <SidebarTrigger className="md:hidden" />
-            </div>
+            <NotificationPanel />
           </div>
           {children}
         </main>
