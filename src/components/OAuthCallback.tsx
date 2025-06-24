@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -7,82 +7,111 @@ import { useToast } from '@/hooks/use-toast';
 export const OAuthCallback = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        console.log('Handling OAuth callback...', window.location.hash);
+        console.log('OAuth Callback - Current URL:', window.location.href);
+        console.log('OAuth Callback - Hash:', window.location.hash);
         
-        // Extract tokens from URL hash
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
+        // Aguardar um pouco para garantir que o Supabase processe a URL
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        if (accessToken && refreshToken) {
-          console.log('Found OAuth tokens in URL, setting session...');
-          
-          // Set the session with the tokens from URL
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
+        // Verificar se já existe uma sessão válida
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Erro ao obter sessão:', sessionError);
+          toast({
+            title: "Erro no login",
+            description: "Erro ao processar login. Tente novamente.",
+            variant: "destructive"
+          });
+          navigate('/login', { replace: true });
+          return;
+        }
+
+        if (sessionData.session) {
+          console.log('Sessão encontrada:', sessionData.session.user.email);
+          toast({
+            title: "Login realizado com sucesso!",
+            description: `Bem-vindo, ${sessionData.session.user.user_metadata?.name || sessionData.session.user.email}!`
           });
           
-          if (error) {
-            console.error('Error setting session:', error);
-            toast({
-              title: "Erro no login",
-              description: "Erro ao processar login com Google. Tente novamente.",
-              variant: "destructive"
-            });
-            navigate('/login', { replace: true });
-            return;
-          }
-
-          if (data.session) {
-            console.log('Session set successfully, user:', data.session.user.email);
-            toast({
-              title: "Login realizado com sucesso!",
-              description: "Bem-vindo ao ContratPro"
+          // Limpar a URL e redirecionar para o dashboard
+          window.history.replaceState({}, document.title, '/dashboard');
+          navigate('/dashboard', { replace: true });
+        } else {
+          console.log('Nenhuma sessão encontrada após callback');
+          
+          // Tentar processar tokens manualmente se não houver sessão
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            console.log('Tentando definir sessão com tokens da URL...');
+            
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
             });
             
-            // Redirect to dashboard without hash in URL
-            navigate('/dashboard', { replace: true });
+            if (error) {
+              console.error('Erro ao definir sessão:', error);
+              toast({
+                title: "Erro no login",
+                description: "Erro ao processar tokens de autenticação.",
+                variant: "destructive"
+              });
+              navigate('/login', { replace: true });
+            } else if (data.session) {
+              console.log('Sessão definida com sucesso:', data.session.user.email);
+              toast({
+                title: "Login realizado com sucesso!",
+                description: `Bem-vindo, ${data.session.user.user_metadata?.name || data.session.user.email}!`
+              });
+              
+              // Limpar a URL e redirecionar para o dashboard
+              window.history.replaceState({}, document.title, '/dashboard');
+              navigate('/dashboard', { replace: true });
+            } else {
+              console.log('Falha ao definir sessão');
+              navigate('/login', { replace: true });
+            }
           } else {
-            console.log('No session created, redirecting to login');
-            navigate('/login', { replace: true });
-          }
-        } else {
-          console.log('No OAuth tokens found in URL');
-          // Check if there's already a session
-          const { data } = await supabase.auth.getSession();
-          if (data.session) {
-            console.log('Existing session found, redirecting to dashboard');
-            navigate('/dashboard', { replace: true });
-          } else {
-            console.log('No session found, redirecting to login');
+            console.log('Nenhum token encontrado na URL');
             navigate('/login', { replace: true });
           }
         }
       } catch (error) {
-        console.error('Unexpected error in OAuth callback:', error);
+        console.error('Erro inesperado no callback OAuth:', error);
         toast({
           title: "Erro inesperado",
           description: "Ocorreu um erro durante o login. Tente novamente.",
           variant: "destructive"
         });
         navigate('/login', { replace: true });
+      } finally {
+        setIsProcessing(false);
       }
     };
 
     handleOAuthCallback();
   }, [navigate, toast]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Processando login...</p>
+  if (isProcessing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Processando login...</p>
+          <p className="text-gray-400 text-sm mt-2">Aguarde enquanto validamos sua autenticação</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 };

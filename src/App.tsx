@@ -23,7 +23,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {/* Rota inicial - sempre acessível */}
+            {/* Rota inicial - Landing page sempre acessível */}
             <Route path="/" element={<Landing />} />
             
             {/* Rotas públicas - redirecionam se usuário já está logado */}
@@ -44,7 +44,7 @@ const App = () => (
               } 
             />
             
-            {/* Rota específica para callback do OAuth */}
+            {/* Rota específica para callback do OAuth - sempre acessível */}
             <Route path="/auth/callback" element={<OAuthCallback />} />
             
             {/* Rota protegida do dashboard */}

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -31,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true
+    const isOAuthCallback = window.location.pathname === '/auth/callback'
 
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -43,20 +45,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null)
         setLoading(false)
 
-        // Handle successful authentication
-        if (event === 'SIGNED_IN' && session) {
-          toast({
-            title: "Login realizado com sucesso!",
-            description: "Bem-vindo ao ContratPro"
-          })
-        }
+        // Só mostrar toasts se não estivermos no callback (para evitar duplicação)
+        if (!isOAuthCallback) {
+          // Handle successful authentication
+          if (event === 'SIGNED_IN' && session) {
+            toast({
+              title: "Login realizado com sucesso!",
+              description: "Bem-vindo ao ContratPro"
+            })
+          }
 
-        // Handle sign out
-        if (event === 'SIGNED_OUT') {
-          toast({
-            title: "Logout realizado",
-            description: "Até logo!"
-          })
+          // Handle sign out
+          if (event === 'SIGNED_OUT') {
+            toast({
+              title: "Logout realizado",
+              description: "Até logo!"
+            })
+          }
         }
       }
     )
