@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { FileText, Users, Clock, CheckCircle, BarChart, Settings, LogOut, User, ChevronUp } from "lucide-react";
+import { FileText, Users, Clock, CheckCircle, BarChart, Settings, LogOut, User, ChevronUp, PlusCircle } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -22,18 +22,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlans } from "@/contexts/PlansContext";
 import { UserProfileModal } from "@/components/UserProfileModal";
 
 const items = [
-  { title: "Dashboard", url: "/", icon: BarChart },
-  { title: "Contratos", url: "/contracts", icon: FileText },
-  { title: "Clientes", url: "/clients", icon: Users },
-  { title: "Pendentes", url: "/pending", icon: Clock },
-  { title: "Assinados", url: "/signed", icon: CheckCircle },
-  { title: "Analytics", url: "/analytics", icon: BarChart },
-  { title: "Configurações", url: "/settings", icon: Settings },
+  { title: "Dashboard", url: "/", icon: BarChart, count: null },
+  { title: "Contratos", url: "/contracts", icon: FileText, count: 0 },
+  { title: "Clientes", url: "/clients", icon: Users, count: 0 },
+  { title: "Pendentes", url: "/pending", icon: Clock, count: 0 },
+  { title: "Assinados", url: "/signed", icon: CheckCircle, count: 0 },
+  { title: "Analytics", url: "/analytics", icon: BarChart, count: null },
+  { title: "Configurações", url: "/settings", icon: Settings, count: null },
 ];
 
 export function AppSidebar() {
@@ -41,7 +42,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { currentPlan, plans } = usePlans();
+  const { currentPlan, plans, canCreateContract } = usePlans();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   
   const currentPath = location.pathname;
@@ -64,7 +65,11 @@ export function AppSidebar() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/login');
+  };
+
+  const handleNewContract = () => {
+    navigate("/contracts/new");
   };
 
   const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário';
@@ -89,8 +94,22 @@ export function AppSidebar() {
             </div>
           </div>
 
+          {/* Botão Novo Contrato */}
+          <div className="p-4">
+            <Button 
+              onClick={handleNewContract}
+              disabled={!canCreateContract}
+              className={`w-full bg-blue-600 hover:bg-blue-700 text-white ${
+                isCollapsed ? 'px-2' : 'px-4'
+              }`}
+            >
+              <PlusCircle className="w-4 h-4" />
+              {!isCollapsed && <span className="ml-2">Novo Contrato</span>}
+            </Button>
+          </div>
+
           {/* Navigation */}
-          <SidebarContent className="flex-1 p-4">
+          <SidebarContent className="flex-1 px-4">
             <SidebarGroup>
               <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
                 Navegação
@@ -101,8 +120,22 @@ export function AppSidebar() {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
                         <NavLink to={item.url} className={getNavCls(item.url)}>
-                          <item.icon className="h-5 w-5 flex-shrink-0" />
-                          {!isCollapsed && <span>{item.title}</span>}
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <item.icon className="h-5 w-5 flex-shrink-0" />
+                              {!isCollapsed && <span>{item.title}</span>}
+                            </div>
+                            {!isCollapsed && item.count !== null && (
+                              <Badge 
+                                variant="secondary" 
+                                className={`${
+                                  isActive(item.url) ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                                }`}
+                              >
+                                {item.count}
+                              </Badge>
+                            )}
+                          </div>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

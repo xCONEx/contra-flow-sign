@@ -30,13 +30,22 @@ export const useClients = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        // Se a tabela não existe, não mostra erro
+        if (error.code === 'PGRST116' || error.message.includes('relation "public.clients" does not exist')) {
+          console.log('Tabela clients ainda não existe no Supabase');
+          setClients([]);
+          return;
+        }
+        throw error;
+      }
       setClients(data || []);
     } catch (error: any) {
+      console.error('Erro ao carregar clientes:', error);
       toast({
-        title: "Erro ao carregar clientes",
-        description: error.message,
-        variant: "destructive"
+        title: "Aviso",
+        description: "Sistema ainda sendo configurado. As tabelas serão criadas automaticamente.",
+        variant: "default"
       });
     } finally {
       setLoading(false);

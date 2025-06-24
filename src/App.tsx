@@ -32,8 +32,8 @@ const App = () => (
         <AuthProvider>
           <PlansProvider>
             <Routes>
-              {/* Rota inicial - Landing page sempre acessível */}
-              <Route path="/" element={<Landing />} />
+              {/* Rota inicial - Landing page pública */}
+              <Route path="/landing" element={<Landing />} />
               
               {/* Rotas públicas - redirecionam se usuário já está logado */}
               <Route 
@@ -56,7 +56,15 @@ const App = () => (
               {/* Rota específica para callback do OAuth - sempre acessível */}
               <Route path="/auth/callback" element={<OAuthCallback />} />
               
-              {/* Rotas protegidas */}
+              {/* Rota protegida principal - Dashboard */}
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/dashboard" 
                 element={

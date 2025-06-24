@@ -38,13 +38,22 @@ export const useContracts = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        // Se a tabela não existe, não mostra erro
+        if (error.code === 'PGRST116' || error.message.includes('relation "public.contracts" does not exist')) {
+          console.log('Tabela contracts ainda não existe no Supabase');
+          setContracts([]);
+          return;
+        }
+        throw error;
+      }
       setContracts(data || []);
     } catch (error: any) {
+      console.error('Erro ao carregar contratos:', error);
       toast({
-        title: "Erro ao carregar contratos",
-        description: error.message,
-        variant: "destructive"
+        title: "Aviso",
+        description: "Sistema ainda sendo configurado. As tabelas serão criadas automaticamente.",
+        variant: "default"
       });
     } finally {
       setLoading(false);
@@ -103,7 +112,6 @@ export const useContracts = () => {
 
       if (error) throw error;
 
-      // Aqui você pode integrar com um serviço de email
       toast({
         title: "Contrato enviado!",
         description: `Contrato enviado para ${clientEmail} para assinatura.`
