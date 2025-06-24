@@ -44,8 +44,18 @@ const App = () => (
               } 
             />
             
-            {/* Rota para callback do OAuth */}
-            <Route path="/dashboard" element={<DashboardRoute />} />
+            {/* Rota específica para callback do OAuth */}
+            <Route path="/auth/callback" element={<OAuthCallback />} />
+            
+            {/* Rota protegida do dashboard */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Página 404 */}
             <Route path="/404" element={<NotFound />} />
@@ -58,21 +68,5 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
-
-// Componente especial para lidar com dashboard e OAuth callback
-const DashboardRoute = () => {
-  // Check if this is an OAuth callback
-  const hasOAuthTokens = window.location.hash.includes('access_token');
-  
-  if (hasOAuthTokens) {
-    return <OAuthCallback />;
-  }
-  
-  return (
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  );
-};
 
 export default App;
