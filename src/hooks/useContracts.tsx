@@ -13,6 +13,8 @@ export interface Contract {
   total_value?: number;
   due_date?: string;
   created_at: string;
+  sent_at?: string;
+  signed_at?: string;
   client?: {
     name: string;
     email: string;
@@ -72,7 +74,11 @@ export const useContracts = () => {
     try {
       const { data, error } = await supabase
         .from('contracts')
-        .insert([{ ...contractData, user_id: user.id }])
+        .insert([{ 
+          ...contractData, 
+          user_id: user.id,
+          status: 'draft'
+        }])
         .select(`
           *,
           client:clients(name, email)
@@ -89,6 +95,7 @@ export const useContracts = () => {
 
       return data;
     } catch (error: any) {
+      console.error('Error creating contract:', error);
       toast({
         title: "Erro ao criar contrato",
         description: error.message,
@@ -107,7 +114,10 @@ export const useContracts = () => {
           sent_at: new Date().toISOString()
         })
         .eq('id', contractId)
-        .select()
+        .select(`
+          *,
+          client:clients(name, email)
+        `)
         .single();
 
       if (error) throw error;
@@ -119,14 +129,53 @@ export const useContracts = () => {
 
       setContracts(prev => prev.map(contract => 
         contract.id === contractId 
-          ? { ...contract, status: 'sent' as const }
+          ? { ...contract, status: 'sent' as const, sent_at: new Date().toISOString() }
           : contract
       ));
 
       return data;
     } catch (error: any) {
+      console.error('Error sending contract:', error);
       toast({
         title: "Erro ao enviar contrato",
+        description: error.message,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const updateContractStatus = async (contractId: string, status: Contract['status']) => {
+    try {
+      const updateData: any = { status };
+      
+      if (status === 'signed') {
+        updateData.signed_at = new Date().toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from('contracts')
+        .update(updateData)
+        .eq('id', contractId)
+        .select(`
+          *,
+          client:clients(name, email)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      setContracts(prev => prev.map(contract => 
+        contract.id === contractId 
+          ? { ...contract, ...updateData }
+          : contract
+      ));
+
+      return data;
+    } catch (error: any) {
+      console.error('Error updating contract status:', error);
+      toast({
+        title: "Erro ao atualizar contrato",
         description: error.message,
         variant: "destructive"
       });
@@ -143,6 +192,7 @@ export const useContracts = () => {
     loading,
     createContract,
     sendContractForSignature,
+    updateContractStatus,
     refetch: fetchContracts
   };
 };

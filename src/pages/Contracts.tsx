@@ -7,14 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { FileText, Search, Plus, Filter, Send, Eye } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { NotificationPanel } from "@/components/NotificationPanel";
+import { ContractViewDialog } from "@/components/ContractViewDialog";
 import { useNavigate } from "react-router-dom";
 import { usePlans } from "@/contexts/PlansContext";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { useContracts } from "@/hooks/useContracts";
+import { useContracts, Contract } from "@/hooks/useContracts";
 
 const Contracts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { canCreateContract } = usePlans();
   const { contracts, loading, sendContractForSignature } = useContracts();
@@ -33,6 +37,11 @@ const Contracts = () => {
     } catch (error) {
       console.error('Error sending contract:', error);
     }
+  };
+
+  const handleViewContract = (contract: Contract) => {
+    setSelectedContract(contract);
+    setViewDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -70,14 +79,17 @@ const Contracts = () => {
                 <h1 className="text-lg font-semibold">Contratos</h1>
               </div>
               
-              <Button 
-                onClick={handleNewContract}
-                disabled={!canCreateContract}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Contrato
-              </Button>
+              <div className="flex items-center gap-2">
+                <NotificationPanel />
+                <Button 
+                  onClick={handleNewContract}
+                  disabled={!canCreateContract}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Contrato
+                </Button>
+              </div>
             </div>
           </header>
 
@@ -134,7 +146,11 @@ const Contracts = () => {
                         </div>
                         
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewContract(contract)}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                           {contract.status === 'draft' && (
@@ -183,6 +199,14 @@ const Contracts = () => {
         open={upgradeModalOpen} 
         onOpenChange={setUpgradeModalOpen} 
       />
+
+      {selectedContract && (
+        <ContractViewDialog
+          open={viewDialogOpen}
+          onOpenChange={setViewDialogOpen}
+          contract={selectedContract}
+        />
+      )}
     </SidebarProvider>
   );
 };

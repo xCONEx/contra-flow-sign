@@ -3,20 +3,40 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Search, Filter, Phone, Mail, MapPin } from "lucide-react";
+import { Users, Search, Filter, Phone, Mail, MapPin, Edit, Trash2, Eye } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { NewClientDialog } from "@/components/NewClientDialog";
-import { useClients } from "@/hooks/useClients";
+import { EditClientDialog } from "@/components/EditClientDialog";
+import { DeleteClientDialog } from "@/components/DeleteClientDialog";
+import { useClients, Client } from "@/hooks/useClients";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const { clients, loading } = useClients();
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [deletingClient, setDeletingClient] = useState<Client | null>(null);
+  const { clients, loading, refetch } = useClients();
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleClientUpdated = () => {
+    refetch();
+    setEditingClient(null);
+  };
+
+  const handleClientDeleted = () => {
+    refetch();
+    setDeletingClient(null);
+  };
 
   return (
     <SidebarProvider>
@@ -29,6 +49,9 @@ const Clients = () => {
             <div className="flex flex-1 items-center justify-between">
               <div>
                 <h1 className="text-lg font-semibold">Clientes</h1>
+                <p className="text-sm text-gray-500">
+                  {clients.length} {clients.length === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}
+                </p>
               </div>
               
               <NewClientDialog />
@@ -64,11 +87,45 @@ const Clients = () => {
                 {filteredClients.map((client) => (
                   <Card key={client.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
-                      <CardTitle className="text-lg">{client.name}</CardTitle>
-                      <CardDescription className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {client.email}
-                      </CardDescription>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg truncate">{client.name}</CardTitle>
+                          <CardDescription className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            <span className="truncate">{client.email}</span>
+                          </CardDescription>
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <span className="sr-only">Abrir menu</span>
+                              <div className="flex flex-col gap-1">
+                                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                              </div>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => console.log('Visualizar cliente')}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Visualizar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setEditingClient(client)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => setDeletingClient(client)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-2">
                       {client.phone && (
@@ -77,10 +134,15 @@ const Clients = () => {
                           {client.phone}
                         </div>
                       )}
+                      {client.cpf_cnpj && (
+                        <div className="text-sm text-gray-600">
+                          CPF/CNPJ: {client.cpf_cnpj}
+                        </div>
+                      )}
                       {client.address && (
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <MapPin className="h-3 w-3" />
-                          {client.address}
+                          <span className="truncate">{client.address}</span>
                         </div>
                       )}
                       <div className="text-xs text-gray-400 mt-3">
@@ -108,6 +170,25 @@ const Clients = () => {
           </main>
         </SidebarInset>
       </div>
+
+      {/* Dialogs */}
+      {editingClient && (
+        <EditClientDialog
+          open={!!editingClient}
+          onOpenChange={(open) => !open && setEditingClient(null)}
+          client={editingClient}
+          onClientUpdated={handleClientUpdated}
+        />
+      )}
+
+      {deletingClient && (
+        <DeleteClientDialog
+          open={!!deletingClient}
+          onOpenChange={(open) => !open && setDeletingClient(null)}
+          client={deletingClient}
+          onClientDeleted={handleClientDeleted}
+        />
+      )}
     </SidebarProvider>
   );
 };

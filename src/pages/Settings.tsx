@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings as SettingsIcon, CreditCard, Crown, PenTool, Upload } from "lucide-react";
+import { Settings as SettingsIcon, CreditCard, Crown, PenTool, Upload, ExternalLink } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { NotificationPanel } from "@/components/NotificationPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlans } from "@/contexts/PlansContext";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +85,18 @@ const Settings = () => {
     }
   };
 
+  const handleChangePlan = () => {
+    // Redirecionar para a landing page
+    window.open('/landing', '_blank');
+  };
+
+  const handleManageBilling = () => {
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "O gerenciamento de faturamento estará disponível em breve.",
+    });
+  };
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -97,6 +109,7 @@ const Settings = () => {
               <div>
                 <h1 className="text-lg font-semibold">Configurações</h1>
               </div>
+              <NotificationPanel />
             </div>
           </header>
 
@@ -147,8 +160,20 @@ const Settings = () => {
                   </div>
 
                   <div className="flex gap-3">
-                    <Button variant="outline">Alterar Plano</Button>
-                    <Button variant="outline">Gerenciar Faturamento</Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleChangePlan}
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Alterar Plano
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={handleManageBilling}
+                    >
+                      Gerenciar Faturamento
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

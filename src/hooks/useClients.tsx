@@ -81,6 +81,58 @@ export const useClients = () => {
     }
   };
 
+  const updateClient = async (clientId: string, clientData: Partial<Omit<Client, 'id' | 'created_at'>>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .update(clientData)
+        .eq('id', clientId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setClients(prev => prev.map(client => 
+        client.id === clientId ? data : client
+      ));
+
+      return data;
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar cliente",
+        description: error.message,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const deleteClient = async (clientId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', clientId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setClients(prev => prev.filter(client => client.id !== clientId));
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir cliente",
+        description: error.message,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchClients();
   }, [user]);
@@ -89,6 +141,8 @@ export const useClients = () => {
     clients,
     loading,
     createClient,
+    updateClient,
+    deleteClient,
     refetch: fetchClients
   };
 };
