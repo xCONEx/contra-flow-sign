@@ -31,56 +31,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast()
 
   useEffect(() => {
-    // Set up auth state listener
+    let mounted = true
+
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email)
+        
+        if (!mounted) return
+
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
+
+        // Handle successful authentication
+        if (event === 'SIGNED_IN' && session) {
+          toast({
+            title: "Login realizado com sucesso!",
+            description: "Bem-vindo ao ContratPro"
+          })
+        }
+
+        // Handle sign out
+        if (event === 'SIGNED_OUT') {
+          toast({
+            title: "Logout realizado",
+            description: "Até logo!"
+          })
+        }
       }
     )
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email)
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          console.error('Error getting session:', error)
+        } else {
+          console.log('Initial session:', session?.user?.email)
+          if (mounted) {
+            setSession(session)
+            setUser(session?.user ?? null)
+          }
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
 
-    return () => subscription.unsubscribe()
-  }, [])
+    getInitialSession()
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [toast])
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true)
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
       
       if (error) {
+        let errorMessage = error.message
+        
+        // Improve error messages for better UX
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Email ou senha incorretos'
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Por favor, confirme seu email antes de fazer login'
+        }
+        
         toast({
           title: "Erro no login",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive"
-        })
-      } else {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Bem-vindo ao ContratPro"
         })
       }
       
       return { error }
     } catch (error: any) {
+      toast({
+        title: "Erro inesperado",
+        description: "Ocorreu um erro durante o login. Tente novamente.",
+        variant: "destructive"
+      })
       return { error }
+    } finally {
+      setLoading(false)
     }
   }
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`
+      setLoading(true)
+      
+      // Use the current window location for redirect
+      const redirectUrl = `${window.location.origin}/dashboard`
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -94,9 +149,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       
       if (error) {
+        let errorMessage = error.message
+        
+        // Improve error messages
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'Este email já está cadastrado. Tente fazer login.'
+        } else if (error.message.includes('Password should be')) {
+          errorMessage = 'A senha deve ter pelo menos 6 caracteres'
+        }
+        
         toast({
           title: "Erro no cadastro",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive"
         })
       } else {
@@ -108,46 +172,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { error }
     } catch (error: any) {
+      toast({
+        title: "Erro inesperado",
+        description: "Ocorreu um erro durante o cadastro. Tente novamente.",
+        variant: "destructive"
+      })
       return { error }
+    } finally {
+      setLoading(false)
     }
   }
 
   const signInWithGoogle = async () => {
     try {
+      setLoading(true)
+      
+      // Use the current window location for redirect
+      const redirectUrl = `${window.location.origin}/dashboard`
+      
+      console.log('Attempting Google sign in with redirect to:', redirectUrl)
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       })
       
       if (error) {
+        console.error('Google sign in error:', error)
+        let errorMessage = error.message
+        
+        if (error.message.includes('OAuth')) {
+          errorMessage = 'Erro na autenticação com Google. Verifique as configurações.'
+        }
+        
         toast({
           title: "Erro no login com Google",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive"
         })
       }
       
       return { error }
     } catch (error: any) {
+      console.error('Unexpected Google sign in error:', error)
+      toast({
+        title: "Erro inesperado",
+        description: "Ocorreu um erro durante o login com Google. Tente novamente.",
+        variant: "destructive"
+      })
       return { error }
+    } finally {
+      setLoading(false)
     }
   }
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
-      toast({
-        title: "Logout realizado",
-        description: "Até logo!"
-      })
+      setLoading(true)
+      const { error } = await supabase.auth.signOut()
+      
+      if (error) {
+        toast({
+          title: "Erro no logout",
+          description: error.message,
+          variant: "destructive"
+        })
+      }
     } catch (error: any) {
       toast({
-        title: "Erro no logout",
-        description: error.message,
+        title: "Erro inesperado",
+        description: "Ocorreu um erro durante o logout. Tente novamente.",
         variant: "destructive"
       })
+    } finally {
+      setLoading(false)
     }
   }
 
