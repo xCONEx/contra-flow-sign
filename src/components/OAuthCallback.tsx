@@ -11,30 +11,58 @@ export const OAuthCallback = () => {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        console.log('Handling OAuth callback...');
+        console.log('Handling OAuth callback...', window.location.hash);
         
-        // Get the session from URL hash
-        const { data, error } = await supabase.auth.getSession();
+        // Extract tokens from URL hash
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
         
-        if (error) {
-          console.error('OAuth callback error:', error);
-          toast({
-            title: "Erro no login",
-            description: "Erro ao processar login com Google. Tente novamente.",
-            variant: "destructive"
+        if (accessToken && refreshToken) {
+          console.log('Found OAuth tokens in URL, setting session...');
+          
+          // Set the session with the tokens from URL
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
           });
-          navigate('/login', { replace: true });
-          return;
-        }
+          
+          if (error) {
+            console.error('Error setting session:', error);
+            toast({
+              title: "Erro no login",
+              description: "Erro ao processar login com Google. Tente novamente.",
+              variant: "destructive"
+            });
+            navigate('/login', { replace: true });
+            return;
+          }
 
-        if (data.session) {
-          console.log('OAuth successful, redirecting to dashboard');
-          // Clear the URL hash and redirect to dashboard
-          window.history.replaceState({}, document.title, '/dashboard');
-          navigate('/dashboard', { replace: true });
+          if (data.session) {
+            console.log('Session set successfully, user:', data.session.user.email);
+            toast({
+              title: "Login realizado com sucesso!",
+              description: "Bem-vindo ao ContratPro"
+            });
+            
+            // Clear the URL hash and redirect to dashboard
+            window.history.replaceState({}, document.title, '/dashboard');
+            navigate('/dashboard', { replace: true });
+          } else {
+            console.log('No session created, redirecting to login');
+            navigate('/login', { replace: true });
+          }
         } else {
-          console.log('No session found, redirecting to login');
-          navigate('/login', { replace: true });
+          console.log('No OAuth tokens found in URL');
+          // Check if there's already a session
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            console.log('Existing session found, redirecting to dashboard');
+            navigate('/dashboard', { replace: true });
+          } else {
+            console.log('No session found, redirecting to login');
+            navigate('/login', { replace: true });
+          }
         }
       } catch (error) {
         console.error('Unexpected error in OAuth callback:', error);
@@ -47,16 +75,7 @@ export const OAuthCallback = () => {
       }
     };
 
-    // Check if this is an OAuth callback by looking for hash fragments
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    
-    if (accessToken) {
-      handleOAuthCallback();
-    } else {
-      // If no OAuth tokens, just redirect to dashboard normally
-      navigate('/dashboard', { replace: true });
-    }
+    handleOAuthCallback();
   }, [navigate, toast]);
 
   return (
