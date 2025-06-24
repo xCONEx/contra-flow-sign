@@ -1,19 +1,25 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings as SettingsIcon, User, CreditCard, Crown } from "lucide-react";
+import { Settings as SettingsIcon, CreditCard, Crown, PenTool, Upload } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlans } from "@/contexts/PlansContext";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
   const { user } = useAuth();
   const { currentPlan, plans } = usePlans();
+  const { toast } = useToast();
+  const [signatureUploading, setSignatureUploading] = useState(false);
+  const [signatureUrl, setSignatureUrl] = useState("");
   
   const currentPlanDetails = plans.find(plan => plan.id === currentPlan.planType);
 
@@ -23,6 +29,59 @@ const Settings = () => {
       case 'professional': return 'bg-blue-100 text-blue-800';
       case 'premium': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleSignatureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setSignatureUploading(true);
+      
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}_signature.${fileExt}`;
+      const filePath = `signatures/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('signatures')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('signatures')
+        .getPublicUrl(filePath);
+
+      setSignatureUrl(data.publicUrl);
+
+      // Salvar na tabela user_profiles
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user?.id,
+          signature_url: data.publicUrl,
+          updated_at: new Date().toISOString()
+        });
+
+      if (updateError) throw updateError;
+      
+      toast({
+        title: "Assinatura atualizada!",
+        description: "Sua assinatura eletrônica foi salva com sucesso."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao fazer upload",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setSignatureUploading(false);
     }
   };
 
@@ -43,41 +102,6 @@ const Settings = () => {
 
           <main className="flex-1 p-4 md:p-6 max-w-4xl">
             <div className="space-y-6">
-              {/* Perfil do Usuário */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Perfil do Usuário
-                  </CardTitle>
-                  <CardDescription>
-                    Gerencie suas informações pessoais e preferências da conta.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nome</Label>
-                      <Input 
-                        id="name" 
-                        defaultValue={user?.user_metadata?.name || ''} 
-                        placeholder="Seu nome completo"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input 
-                        id="email" 
-                        defaultValue={user?.email || ''} 
-                        disabled 
-                        className="bg-gray-50"
-                      />
-                    </div>
-                  </div>
-                  <Button>Salvar Alterações</Button>
-                </CardContent>
-              </Card>
-
               {/* Plano Atual */}
               <Card>
                 <CardHeader>
@@ -129,15 +153,61 @@ const Settings = () => {
                 </CardContent>
               </Card>
 
-              {/* Preferências */}
+              {/* Assinatura Eletrônica */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PenTool className="h-5 w-5" />
+                    Assinatura Eletrônica
+                  </CardTitle>
+                  <CardDescription>
+                    Configure sua assinatura que será usada nos contratos.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {signatureUrl && (
+                    <div className="p-4 border rounded-lg bg-gray-50">
+                      <img 
+                        src={signatureUrl} 
+                        alt="Assinatura atual" 
+                        className="max-h-20 object-contain"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="signature">Upload da Assinatura</Label>
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <Upload className="h-4 w-4" />
+                        <span className="text-sm">
+                          {signatureUploading ? "Enviando..." : "Escolher arquivo"}
+                        </span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleSignatureUpload}
+                          disabled={signatureUploading}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Formatos aceitos: PNG, JPG, SVG. Tamanho máximo: 2MB
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Outras Configurações */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <SettingsIcon className="h-5 w-5" />
-                    Preferências
+                    Outras Configurações
                   </CardTitle>
                   <CardDescription>
-                    Configure suas preferências de uso da plataforma.
+                    Configure outras preferências da plataforma.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

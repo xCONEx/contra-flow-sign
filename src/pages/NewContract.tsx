@@ -9,22 +9,56 @@ import { FileText, ArrowLeft } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useNavigate } from "react-router-dom";
+import { ClientSelector } from "@/components/ClientSelector";
+import { useContracts } from "@/hooks/useContracts";
+import { Client } from "@/hooks/useClients";
+import { usePlans } from "@/contexts/PlansContext";
 
 const NewContract = () => {
   const navigate = useNavigate();
+  const { createContract } = useContracts();
+  const { canCreateContract, incrementContractCount } = usePlans();
+  const [loading, setLoading] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  
   const [formData, setFormData] = useState({
     title: "",
-    client: "",
-    description: "",
-    value: "",
-    duration: ""
+    content: "",
+    total_value: "",
+    due_date: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Criando contrato:", formData);
-    // Aqui implementaremos a lógica de criação do contrato
-    navigate("/contracts");
+    
+    if (!selectedClient) {
+      alert("Por favor, selecione um cliente.");
+      return;
+    }
+
+    if (!canCreateContract) {
+      alert("Você atingiu o limite de contratos do seu plano.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await createContract({
+        title: formData.title,
+        client_id: selectedClient.id,
+        content: formData.content,
+        total_value: formData.total_value ? parseFloat(formData.total_value) : undefined,
+        due_date: formData.due_date || undefined
+      });
+
+      incrementContractCount();
+      navigate("/contracts");
+    } catch (error) {
+      console.error('Error creating contract:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -83,62 +117,67 @@ const NewContract = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="client">Cliente</Label>
-                      <Input
-                        id="client"
-                        name="client"
-                        value={formData.client}
-                        onChange={handleChange}
-                        placeholder="Nome do cliente ou empresa"
-                        required
-                      />
+                      <Label>Cliente</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={selectedClient?.name || ""}
+                          placeholder="Selecione um cliente"
+                          readOnly
+                          required
+                        />
+                        <ClientSelector
+                          selectedClient={selectedClient || undefined}
+                          onClientSelect={setSelectedClient}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="description">Descrição</Label>
+                      <Label htmlFor="content">Conteúdo do Contrato</Label>
                       <Textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
+                        id="content"
+                        name="content"
+                        value={formData.content}
                         onChange={handleChange}
-                        placeholder="Descreva os serviços ou produtos do contrato"
-                        rows={4}
+                        placeholder="Descreva os termos e condições do contrato"
+                        rows={8}
                         required
                       />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="value">Valor (R$)</Label>
+                        <Label htmlFor="total_value">Valor (R$)</Label>
                         <Input
-                          id="value"
-                          name="value"
+                          id="total_value"
+                          name="total_value"
                           type="number"
                           step="0.01"
-                          value={formData.value}
+                          value={formData.total_value}
                           onChange={handleChange}
                           placeholder="0,00"
-                          required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="duration">Duração (dias)</Label>
+                        <Label htmlFor="due_date">Data de Vencimento</Label>
                         <Input
-                          id="duration"
-                          name="duration"
-                          type="number"
-                          value={formData.duration}
+                          id="due_date"
+                          name="due_date"
+                          type="date"
+                          value={formData.due_date}
                           onChange={handleChange}
-                          placeholder="30"
-                          required
                         />
                       </div>
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                        Criar Contrato
+                      <Button 
+                        type="submit" 
+                        disabled={loading || !canCreateContract}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {loading ? "Criando..." : "Criar Contrato"}
                       </Button>
                       <Button 
                         type="button" 

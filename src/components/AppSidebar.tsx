@@ -1,275 +1,167 @@
 
 import { useState } from "react";
+import { FileText, Users, Clock, CheckCircle, BarChart, Settings, LogOut, User, ChevronUp } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { usePlans } from "@/contexts/PlansContext";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { 
-  FileText, 
-  Users, 
-  BarChart3, 
-  Settings, 
-  Home,
-  PlusCircle,
-  Clock,
-  CheckCircle,
-  User,
-  LogOut,
-  Crown,
-  AlertTriangle
-} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePlans } from "@/contexts/PlansContext";
+import { UserProfileModal } from "@/components/UserProfileModal";
 
-const menuItems = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    url: "/dashboard",
-    icon: Home
-  },
-  {
-    id: "contracts",
-    label: "Contratos",
-    url: "/contracts",
-    icon: FileText
-  },
-  {
-    id: "clients",
-    label: "Clientes", 
-    url: "/clients",
-    icon: Users
-  },
-  {
-    id: "pending",
-    label: "Pendentes",
-    url: "/pending",
-    icon: Clock
-  },
-  {
-    id: "signed",
-    label: "Assinados",
-    url: "/signed", 
-    icon: CheckCircle
-  },
-  {
-    id: "analytics",
-    label: "Relatórios",
-    url: "/analytics",
-    icon: BarChart3
-  },
-  {
-    id: "settings",
-    label: "Configurações",
-    url: "/settings",
-    icon: Settings
-  }
+const items = [
+  { title: "Dashboard", url: "/", icon: BarChart },
+  { title: "Contratos", url: "/contracts", icon: FileText },
+  { title: "Clientes", url: "/clients", icon: Users },
+  { title: "Pendentes", url: "/pending", icon: Clock },
+  { title: "Assinados", url: "/signed", icon: CheckCircle },
+  { title: "Analytics", url: "/analytics", icon: BarChart },
+  { title: "Configurações", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
-  const { user, signOut } = useAuth();
-  const { currentPlan, plans, canCreateContract, getRemainingContracts } = usePlans();
+  const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { state, setOpenMobile } = useSidebar();
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const { currentPlan, plans } = usePlans();
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   
+  const currentPath = location.pathname;
   const currentPlanDetails = plans.find(plan => plan.id === currentPlan.planType);
-  const remainingContracts = getRemainingContracts();
   const isCollapsed = state === "collapsed";
 
-  const handleCreateContract = () => {
-    if (!canCreateContract) {
-      setUpgradeModalOpen(true);
-      return;
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return currentPath === '/';
     }
-    navigate("/contracts/new");
-    setOpenMobile(false); // Fecha sidebar no mobile após navegação
+    return currentPath.startsWith(path);
   };
 
-  const handleSignOut = () => {
-    signOut();
+  const getNavCls = (path: string) => {
+    const baseClasses = "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors";
+    return isActive(path) 
+      ? `${baseClasses} bg-blue-100 text-blue-700 font-medium` 
+      : `${baseClasses} text-gray-700 hover:bg-gray-100`;
   };
 
-  const handleNavigation = () => {
-    setOpenMobile(false); // Fecha sidebar no mobile após navegação
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
-  const getPlanBadgeColor = () => {
-    switch (currentPlan.planType) {
-      case 'free': return 'bg-gray-100 text-gray-800';
-      case 'professional': return 'bg-blue-100 text-blue-800';
-      case 'premium': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário';
+  const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <SidebarHeader className="border-b p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 flex-shrink-0">
-            <FileText className="h-4 w-4 text-white" />
-          </div>
-          {!isCollapsed && (
-            <span className="text-lg font-bold text-gray-900 truncate">ContratPro</span>
-          )}
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent>
-        {/* Create Button */}
-        <div className="p-4">
-          <Button 
-            onClick={handleCreateContract}
-            className={`w-full bg-blue-600 hover:bg-blue-700 text-white relative ${
-              !canCreateContract ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            disabled={!canCreateContract}
-          >
-            <PlusCircle className="h-4 w-4 flex-shrink-0" />
-            {!isCollapsed && <span className="ml-2">Novo Contrato</span>}
-            {!canCreateContract && !isCollapsed && (
-              <AlertTriangle className="h-4 w-4 ml-2 text-yellow-400 flex-shrink-0" />
-            )}
-          </Button>
-          
-          {!isCollapsed && remainingContracts !== null && (
-            <div className="mt-2 text-center">
-              <span className={`text-xs ${remainingContracts === 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                {remainingContracts} contratos restantes
-              </span>
+    <>
+      <Sidebar
+        className={`border-r border-gray-200 ${isCollapsed ? "w-16" : "w-64"}`}
+        collapsible="icon"
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              {!isCollapsed && (
+                <span className="font-bold text-xl text-gray-900">ContratPro</span>
+              )}
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <NavLink 
-                        to={item.url} 
-                        className="flex items-center gap-3"
-                        onClick={handleNavigation}
-                      >
-                        <Icon className="h-4 w-4 flex-shrink-0" />
-                        {!isCollapsed && <span className="truncate">{item.label}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+          {/* Navigation */}
+          <SidebarContent className="flex-1 p-4">
+            <SidebarGroup>
+              <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+                Navegação
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="space-y-2">
+                  {items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <NavLink to={item.url} className={getNavCls(item.url)}>
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          {!isCollapsed && <span>{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t">
-        {!isCollapsed ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start p-2 h-auto">
-                <div className="flex items-center gap-3 w-full min-w-0">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 flex-shrink-0">
-                    <span className="text-xs font-semibold text-white">
-                      {user?.user_metadata?.name?.[0] || user?.email?.[0] || 'U'}
-                    </span>
-                  </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário'}
-                    </p>
-                    <div className="flex items-center gap-1">
+          {/* User Section */}
+          <SidebarFooter className="p-4 border-t border-gray-200">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div 
+                  className={`flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors ${
+                    isCollapsed ? 'justify-center' : ''
+                  }`}
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback className="bg-blue-600 text-white text-sm">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!isCollapsed && (
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {userName}
+                      </p>
                       <Badge 
                         variant="secondary" 
-                        className={`text-xs ${getPlanBadgeColor()}`}
+                        className="text-xs bg-blue-100 text-blue-700 mt-1"
                       >
                         {currentPlanDetails?.name}
                       </Badge>
-                      {currentPlan.planType === 'premium' && (
-                        <Crown className="h-3 w-3 text-yellow-500 flex-shrink-0" />
-                      )}
                     </div>
-                  </div>
+                  )}
+                  {!isCollapsed && <ChevronUp className="h-4 w-4 text-gray-400" />}
                 </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => navigate("/settings")}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Perfil</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Sair</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600">
-                  <span className="text-xs font-semibold text-white">
-                    {user?.user_metadata?.name?.[0] || user?.email?.[0] || 'U'}
-                  </span>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">
-                  {user?.user_metadata?.name || user?.email?.split('@')[0] || 'Usuário'}
-                </p>
-                <Badge 
-                  variant="secondary" 
-                  className={`text-xs mt-1 ${getPlanBadgeColor()}`}
-                >
-                  {currentPlanDetails?.name}
-                </Badge>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/settings")}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Perfil</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Sair</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </SidebarFooter>
-    </Sidebar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setProfileModalOpen(true)}>
+                  <User className="h-4 w-4 mr-2" />
+                  Perfil
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarFooter>
+        </div>
+      </Sidebar>
+
+      <UserProfileModal 
+        open={profileModalOpen} 
+        onOpenChange={setProfileModalOpen} 
+      />
+    </>
   );
 }
