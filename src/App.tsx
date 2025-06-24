@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PublicRoute } from "@/components/PublicRoute";
+import { OAuthCallback } from "@/components/OAuthCallback";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -43,15 +44,8 @@ const App = () => (
               } 
             />
             
-            {/* Rotas privadas - requerem autenticação */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Rota para callback do OAuth */}
+            <Route path="/dashboard" element={<DashboardRoute />} />
             
             {/* Página 404 */}
             <Route path="/404" element={<NotFound />} />
@@ -64,5 +58,21 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+
+// Componente especial para lidar com dashboard e OAuth callback
+const DashboardRoute = () => {
+  // Check if this is an OAuth callback
+  const hasOAuthTokens = window.location.hash.includes('access_token');
+  
+  if (hasOAuthTokens) {
+    return <OAuthCallback />;
+  }
+  
+  return (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  );
+};
 
 export default App;
