@@ -1,11 +1,12 @@
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check, FileText, Shield, Zap, Users, Globe, Star, ArrowRight } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 const Landing = () => {
+  const navigate = useNavigate();
+
   const features = [
     {
       icon: FileText,
@@ -112,14 +113,15 @@ const Landing = () => {
             <span className="text-2xl font-bold text-gray-900">ContratPro</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Link to="/login">
-              <Button variant="ghost">Entrar</Button>
-            </Link>
-            <Link to="/login">
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                Começar Grátis
-              </Button>
-            </Link>
+            <Button variant="ghost" onClick={() => navigate('/login')}>
+              Entrar
+            </Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => navigate('/login')}
+            >
+              Começar Grátis
+            </Button>
           </div>
         </nav>
       </header>
@@ -138,12 +140,14 @@ const Landing = () => {
           Automatize seu fluxo de trabalho e foque no que realmente importa.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link to="/login">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3">
-              Começar Grátis
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <Button 
+            size="lg" 
+            className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3"
+            onClick={() => navigate('/login')}
+          >
+            Começar Grátis
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
           <Button size="lg" variant="outline" className="text-lg px-8 py-3">
             Ver Demonstração
           </Button>
@@ -219,17 +223,16 @@ const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/login" className="block mt-8">
-                  <Button 
-                    className={`w-full ${
-                      plan.highlighted 
-                        ? 'bg-blue-600 hover:bg-blue-700' 
-                        : 'bg-gray-900 hover:bg-gray-800'
-                    }`}
-                  >
-                    Começar Agora
-                  </Button>
-                </Link>
+                <Button 
+                  className={`w-full mt-8 ${
+                    plan.highlighted 
+                      ? 'bg-blue-600 hover:bg-blue-700' 
+                      : 'bg-gray-900 hover:bg-gray-800'
+                  }`}
+                  onClick={() => navigate('/login')}
+                >
+                  Começar Agora
+                </Button>
               </CardContent>
             </Card>
           ))}
@@ -272,12 +275,15 @@ const Landing = () => {
           <p className="text-xl mb-8 opacity-90">
             Junte-se a milhares de profissionais que já automatizaram seus processos
           </p>
-          <Link to="/login">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-3">
-              Começar Grátis Agora
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <Button 
+            size="lg" 
+            variant="secondary" 
+            className="text-lg px-8 py-3"
+            onClick={() => navigate('/login')}
+          >
+            Começar Grátis Agora
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
         </div>
       </section>
 

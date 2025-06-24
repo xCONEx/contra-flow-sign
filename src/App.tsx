@@ -34,6 +34,7 @@ const App = () => (
           <PlansProvider>
             <Routes>
               {/* Rota inicial - Landing page pública */}
+              <Route path="/" element={<Landing />} />
               <Route path="/landing" element={<Landing />} />
               
               {/* Rotas públicas - redirecionam se usuário já está logado */}
@@ -58,16 +59,6 @@ const App = () => (
               <Route path="/auth/callback" element={<OAuthCallback />} />
               
               {/* Rotas protegidas com sidebar */}
-              <Route 
-                path="/" 
-                element={
-                  <ProtectedRoute>
-                    <AppSidebarProvider>
-                      <Dashboard />
-                    </AppSidebarProvider>
-                  </ProtectedRoute>
-                } 
-              />
               <Route 
                 path="/dashboard" 
                 element={
