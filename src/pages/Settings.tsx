@@ -6,9 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Settings as SettingsIcon, CreditCard, Crown, PenTool, Upload, ExternalLink } from "lucide-react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { NotificationPanel } from "@/components/NotificationPanel";
+import { AppSidebarProvider } from "@/components/AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlans } from "@/contexts/PlansContext";
 import { useToast } from "@/hooks/use-toast";
@@ -86,7 +84,6 @@ const Settings = () => {
   };
 
   const handleChangePlan = () => {
-    // Redirecionar para a landing page
     window.open('/landing', '_blank');
   };
 
@@ -98,157 +95,146 @@ const Settings = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        
-        <SidebarInset className="flex-1">
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            <div className="flex flex-1 items-center justify-between">
-              <div>
-                <h1 className="text-lg font-semibold">Configurações</h1>
-              </div>
-              <NotificationPanel />
-            </div>
-          </header>
+    <AppSidebarProvider>
+      <div className="p-4 md:p-6 max-w-4xl">
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
+          <p className="text-gray-500">Gerencie suas preferências e configurações da conta</p>
+        </header>
 
-          <main className="flex-1 p-4 md:p-6 max-w-4xl">
-            <div className="space-y-6">
-              {/* Plano Atual */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Plano Atual
-                  </CardTitle>
-                  <CardDescription>
-                    Gerencie sua assinatura e veja o uso atual.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge 
-                        variant="secondary" 
-                        className={`${getPlanBadgeColor()}`}
-                      >
-                        {currentPlanDetails?.name}
-                      </Badge>
-                      {currentPlan.planType === 'premium' && (
-                        <Crown className="h-5 w-5 text-yellow-500" />
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">{currentPlanDetails?.price}</p>
-                      <p className="text-sm text-gray-500">por mês</p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Recursos inclusos:</h4>
-                    <ul className="space-y-1 text-sm text-gray-600">
-                      {currentPlanDetails?.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2">
-                          <div className="h-1.5 w-1.5 bg-blue-600 rounded-full"></div>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={handleChangePlan}
-                      className="flex items-center gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Alterar Plano
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={handleManageBilling}
-                    >
-                      Gerenciar Faturamento
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Assinatura Eletrônica */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PenTool className="h-5 w-5" />
-                    Assinatura Eletrônica
-                  </CardTitle>
-                  <CardDescription>
-                    Configure sua assinatura que será usada nos contratos.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {signatureUrl && (
-                    <div className="p-4 border rounded-lg bg-gray-50">
-                      <img 
-                        src={signatureUrl} 
-                        alt="Assinatura atual" 
-                        className="max-h-20 object-contain"
-                      />
-                    </div>
+        <div className="space-y-6">
+          {/* Plano Atual */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Plano Atual
+              </CardTitle>
+              <CardDescription>
+                Gerencie sua assinatura e veja o uso atual.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Badge 
+                    variant="secondary" 
+                    className={`${getPlanBadgeColor()}`}
+                  >
+                    {currentPlanDetails?.name}
+                  </Badge>
+                  {currentPlan.planType === 'premium' && (
+                    <Crown className="h-5 w-5 text-yellow-500" />
                   )}
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signature">Upload da Assinatura</Label>
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <Upload className="h-4 w-4" />
-                        <span className="text-sm">
-                          {signatureUploading ? "Enviando..." : "Escolher arquivo"}
-                        </span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handleSignatureUpload}
-                          disabled={signatureUploading}
-                        />
-                      </label>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Formatos aceitos: PNG, JPG, SVG. Tamanho máximo: 2MB
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold">{currentPlanDetails?.price}</p>
+                  <p className="text-sm text-gray-500">por mês</p>
+                </div>
+              </div>
 
-              {/* Outras Configurações */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <SettingsIcon className="h-5 w-5" />
-                    Outras Configurações
-                  </CardTitle>
-                  <CardDescription>
-                    Configure outras preferências da plataforma.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8">
-                    <SettingsIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">
-                      Configurações adicionais em breve.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </main>
-        </SidebarInset>
+              <Separator />
+
+              <div className="space-y-2">
+                <h4 className="font-medium">Recursos inclusos:</h4>
+                <ul className="space-y-1 text-sm text-gray-600">
+                  {currentPlanDetails?.features.map((feature, index) => (
+                    <li key={index} className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 bg-blue-600 rounded-full"></div>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={handleChangePlan}
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Alterar Plano
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={handleManageBilling}
+                >
+                  Gerenciar Faturamento
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Assinatura Eletrônica */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PenTool className="h-5 w-5" />
+                Assinatura Eletrônica
+              </CardTitle>
+              <CardDescription>
+                Configure sua assinatura que será usada nos contratos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {signatureUrl && (
+                <div className="p-4 border rounded-lg bg-gray-50">
+                  <img 
+                    src={signatureUrl} 
+                    alt="Assinatura atual" 
+                    className="max-h-20 object-contain"
+                  />
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="signature">Upload da Assinatura</Label>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <Upload className="h-4 w-4" />
+                    <span className="text-sm">
+                      {signatureUploading ? "Enviando..." : "Escolher arquivo"}
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleSignatureUpload}
+                      disabled={signatureUploading}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Formatos aceitos: PNG, JPG, SVG. Tamanho máximo: 2MB
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Outras Configurações */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SettingsIcon className="h-5 w-5" />
+                Outras Configurações
+              </CardTitle>
+              <CardDescription>
+                Configure outras preferências da plataforma.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <SettingsIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">
+                  Configurações adicionais em breve.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </SidebarProvider>
+    </AppSidebarProvider>
   );
 };
 

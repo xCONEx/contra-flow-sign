@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
+  const channelRef = useRef<any>(null);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -93,12 +94,17 @@ export const useNotifications = () => {
     }
   };
 
-  // Escutar mudanças em tempo real
+  // Escutar mudanças em tempo real - com cleanup adequado
   useEffect(() => {
     if (!user) return;
 
+    // Limpar canal anterior se existir
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
     const channel = supabase
-      .channel('notifications')
+      .channel(`notifications_${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -121,10 +127,15 @@ export const useNotifications = () => {
       )
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [user, toast]);
+  }, [user?.id, toast]);
 
   useEffect(() => {
     fetchNotifications();
