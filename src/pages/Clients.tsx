@@ -8,6 +8,7 @@ import { AppSidebarProvider } from "@/components/AppSidebar";
 import { NewClientDialog } from "@/components/NewClientDialog";
 import { EditClientDialog } from "@/components/EditClientDialog";
 import { DeleteClientDialog } from "@/components/DeleteClientDialog";
+import { ClientViewDialog } from "@/components/ClientViewDialog";
 import { useClients, Client } from "@/hooks/useClients";
 import {
   DropdownMenu,
@@ -20,6 +21,7 @@ const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
+  const [viewingClient, setViewingClient] = useState<Client | null>(null);
   const { clients, loading, refetch } = useClients();
 
   const filteredClients = clients.filter(client =>
@@ -39,7 +41,7 @@ const Clients = () => {
 
   return (
     <AppSidebarProvider>
-      <div className="flex-1 p-4 md:p-6">
+      <div className="flex-1 p-4 md:p-6 overflow-x-hidden">
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -101,7 +103,7 @@ const Clients = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => console.log('Visualizar cliente')}>
+                        <DropdownMenuItem onClick={() => setViewingClient(client)}>
                           <Eye className="h-4 w-4 mr-2" />
                           Visualizar
                         </DropdownMenuItem>
@@ -177,6 +179,14 @@ const Clients = () => {
             onOpenChange={(open) => !open && setDeletingClient(null)}
             client={deletingClient}
             onClientDeleted={handleClientDeleted}
+          />
+        )}
+
+        {viewingClient && (
+          <ClientViewDialog
+            open={!!viewingClient}
+            onOpenChange={(open) => !open && setViewingClient(null)}
+            client={viewingClient}
           />
         )}
       </div>

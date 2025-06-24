@@ -6,10 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Search, Filter, Eye, Download, Calendar } from "lucide-react";
 import { AppSidebarProvider } from "@/components/AppSidebar";
-import { useContracts } from "@/hooks/useContracts";
+import { ContractViewDialog } from "@/components/ContractViewDialog";
+import { useContracts, Contract } from "@/hooks/useContracts";
 
 const Signed = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const { contracts, loading } = useContracts();
 
   const signedContracts = contracts.filter(contract => 
@@ -25,6 +28,11 @@ const Signed = () => {
     sum + (contract.total_value || 0), 0
   );
 
+  const handleViewContract = (contract: Contract) => {
+    setSelectedContract(contract);
+    setViewDialogOpen(true);
+  };
+
   const getDaysAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -39,10 +47,10 @@ const Signed = () => {
 
   return (
     <AppSidebarProvider>
-      <div className="p-4 md:p-6">
+      <div className="p-4 md:p-6 overflow-x-hidden">
         <header className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Contratos Assinados</h1>
-          <p className="text-gray-500">
+          <p className="text-gray-500 break-words">
             {signedContracts.length} contratos assinados • 
             Valor total: R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
@@ -59,7 +67,7 @@ const Signed = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto">
               <Filter className="h-4 w-4 mr-2" />
               Filtros
             </Button>
@@ -68,7 +76,7 @@ const Signed = () => {
 
         {/* Resumo */}
         {signedContracts.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Total de Contratos</CardTitle>
@@ -83,18 +91,18 @@ const Signed = () => {
                 <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-bold text-green-600 break-words">
                   R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="sm:col-span-2 lg:col-span-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Valor Médio</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-bold text-green-600 break-words">
                   R$ {(totalValue / signedContracts.length).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </CardContent>
@@ -112,27 +120,27 @@ const Signed = () => {
             {filteredContracts.map((contract) => (
               <Card key={contract.id} className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <div className="space-y-1 flex-1 min-w-0">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        {contract.title}
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="truncate">{contract.title}</span>
+                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="break-words">
                         Cliente: {contract.client?.name} • {contract.client?.email}
                       </CardDescription>
                     </div>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 flex-shrink-0">
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Assinado
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-2 flex-1">
                       {contract.total_value && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                           <span className="text-sm text-gray-600">Valor:</span>
                           <span className="text-lg font-semibold text-green-600">
                             R$ {contract.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -150,13 +158,19 @@ const Signed = () => {
                       )}
                     </div>
                     
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewContract(contract)}
+                        className="flex-1 sm:flex-initial"
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button 
                         size="sm"
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-initial"
+                        onClick={() => handleViewContract(contract)}
                       >
                         <Download className="h-4 w-4 mr-1" />
                         PDF
@@ -180,6 +194,15 @@ const Signed = () => {
               }
             </p>
           </div>
+        )}
+
+        {/* Contract View Dialog */}
+        {selectedContract && (
+          <ContractViewDialog
+            open={viewDialogOpen}
+            onOpenChange={setViewDialogOpen}
+            contract={selectedContract}
+          />
         )}
       </div>
     </AppSidebarProvider>

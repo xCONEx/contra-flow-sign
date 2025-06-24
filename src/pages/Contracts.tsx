@@ -66,9 +66,9 @@ const Contracts = () => {
 
   return (
     <AppSidebarProvider>
-      <div className="p-4 md:p-6">
+      <div className="p-4 md:p-6 overflow-x-hidden">
         <header className="mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Contratos</h1>
               <p className="text-gray-500">Gerencie todos os seus contratos</p>
@@ -77,7 +77,7 @@ const Contracts = () => {
             <Button 
               onClick={handleNewContract}
               disabled={!canCreateContract}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
               Novo Contrato
@@ -96,7 +96,7 @@ const Contracts = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto">
               <Filter className="h-4 w-4 mr-2" />
               Filtros
             </Button>
@@ -113,10 +113,10 @@ const Contracts = () => {
             {filteredContracts.map((contract) => (
               <Card key={contract.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                    <div className="space-y-1 flex-1 min-w-0">
                       <CardTitle className="text-lg">{contract.title}</CardTitle>
-                      <CardDescription>
+                      <CardDescription className="break-words">
                         Cliente: {contract.client?.name} • {contract.client?.email}
                       </CardDescription>
                     </div>
@@ -124,8 +124,8 @@ const Contracts = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1 flex-1">
                       {contract.total_value && (
                         <p className="text-sm text-gray-600">
                           Valor: R$ {contract.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -136,11 +136,12 @@ const Contracts = () => {
                       </p>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => handleViewContract(contract)}
+                        className="flex-1 sm:flex-initial"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -148,7 +149,7 @@ const Contracts = () => {
                         <Button 
                           size="sm"
                           onClick={() => handleSendContract(contract.id, contract.client?.email || '')}
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-initial"
                         >
                           <Send className="h-4 w-4 mr-1" />
                           Enviar

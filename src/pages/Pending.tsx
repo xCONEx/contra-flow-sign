@@ -4,13 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Search, Filter, Send, Eye, AlertCircle } from "lucide-react";
+import { Clock, Search, Filter, Send, Eye, AlertCircle, CheckCircle } from "lucide-react";
 import { AppSidebarProvider } from "@/components/AppSidebar";
-import { useContracts } from "@/hooks/useContracts";
+import { ContractViewDialog } from "@/components/ContractViewDialog";
+import { useContracts, Contract } from "@/hooks/useContracts";
 
 const Pending = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const { contracts, loading, sendContractForSignature } = useContracts();
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const { contracts, loading, sendContractForSignature, updateContractStatus } = useContracts();
 
   const pendingContracts = contracts.filter(contract => 
     contract.status === 'draft' || contract.status === 'sent'
@@ -27,6 +30,19 @@ const Pending = () => {
     } catch (error) {
       console.error('Error sending contract:', error);
     }
+  };
+
+  const handleMarkAsSigned = async (contractId: string) => {
+    try {
+      await updateContractStatus(contractId, 'signed');
+    } catch (error) {
+      console.error('Error marking contract as signed:', error);
+    }
+  };
+
+  const handleViewContract = (contract: Contract) => {
+    setSelectedContract(contract);
+    setViewDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -62,7 +78,7 @@ const Pending = () => {
 
   return (
     <AppSidebarProvider>
-      <div className="p-4 md:p-6">
+      <div className="p-4 md:p-6 overflow-x-hidden">
         <header className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Contratos Pendentes</h1>
           <p className="text-gray-500">
@@ -126,8 +142,12 @@ const Pending = () => {
                       )}
                     </div>
                     
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewContract(contract)}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                       {contract.status === 'draft' && (
@@ -141,14 +161,24 @@ const Pending = () => {
                         </Button>
                       )}
                       {contract.status === 'sent' && (
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                        >
-                          <Clock className="h-4 w-4 mr-1" />
-                          Aguardando
-                        </Button>
+                        <>
+                          <Button 
+                            size="sm"
+                            variant="outline"
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <Clock className="h-4 w-4 mr-1" />
+                            Aguardando
+                          </Button>
+                          <Button 
+                            size="sm"
+                            onClick={() => handleMarkAsSigned(contract.id)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Marcar Assinado
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -169,6 +199,15 @@ const Pending = () => {
               }
             </p>
           </div>
+        )}
+
+        {/* Contract View Dialog */}
+        {selectedContract && (
+          <ContractViewDialog
+            open={viewDialogOpen}
+            onOpenChange={setViewDialogOpen}
+            contract={selectedContract}
+          />
         )}
       </div>
     </AppSidebarProvider>

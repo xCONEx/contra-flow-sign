@@ -50,7 +50,6 @@ export const ContractViewDialog = ({ open, onOpenChange, contract }: ContractVie
     try {
       let signatureUrl = '';
       
-      // Buscar assinatura do usuário se o contrato estiver assinado
       if (contract.status === 'signed' && user) {
         const { data: profile } = await supabase
           .from('user_profiles')
@@ -71,9 +70,9 @@ export const ContractViewDialog = ({ open, onOpenChange, contract }: ContractVie
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-4xl max-h-[90vh] w-[95vw] overflow-hidden">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5" />
             {contract.title}
           </DialogTitle>
@@ -82,7 +81,7 @@ export const ContractViewDialog = ({ open, onOpenChange, contract }: ContractVie
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-200px)]">
           {/* Informações do contrato */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
             <div>
@@ -142,21 +141,21 @@ export const ContractViewDialog = ({ open, onOpenChange, contract }: ContractVie
               </div>
             </ScrollArea>
           </div>
+        </div>
 
-          {/* Botões de ação */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Fechar
-            </Button>
-            <Button 
-              onClick={handleDownloadPDF}
-              disabled={downloading}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {downloading ? "Gerando PDF..." : "Baixar PDF"}
-            </Button>
-          </div>
+        {/* Botões de ação - fixos no bottom */}
+        <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
+          <Button 
+            onClick={handleDownloadPDF}
+            disabled={downloading}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {downloading ? "Gerando PDF..." : "Baixar PDF"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
