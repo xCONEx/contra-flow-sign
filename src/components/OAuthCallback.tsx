@@ -45,8 +45,7 @@ export const OAuthCallback = () => {
               description: "Bem-vindo ao ContratPro"
             });
             
-            // Clear the URL hash and redirect to dashboard
-            window.history.replaceState({}, document.title, '/dashboard');
+            // Redirect to dashboard without hash in URL
             navigate('/dashboard', { replace: true });
           } else {
             console.log('No session created, redirecting to login');
