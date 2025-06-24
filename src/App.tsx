@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PlansProvider } from "@/contexts/PlansContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PublicRoute } from "@/components/PublicRoute";
 import { OAuthCallback } from "@/components/OAuthCallback";
@@ -22,47 +23,49 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            {/* Rota inicial - Landing page sempre acessível */}
-            <Route path="/" element={<Landing />} />
-            
-            {/* Rotas públicas - redirecionam se usuário já está logado */}
-            <Route 
-              path="/login" 
-              element={
-                <PublicRoute>
-                  <Auth />
-                </PublicRoute>
-              } 
-            />
-            <Route 
-              path="/register" 
-              element={
-                <PublicRoute>
-                  <Auth />
-                </PublicRoute>
-              } 
-            />
-            
-            {/* Rota específica para callback do OAuth - sempre acessível */}
-            <Route path="/auth/callback" element={<OAuthCallback />} />
-            
-            {/* Rota protegida do dashboard */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Página 404 */}
-            <Route path="/404" element={<NotFound />} />
-            
-            {/* Captura todas as rotas não definidas e redireciona para 404 */}
-            <Route path="*" element={<Navigate to="/404" replace />} />
-          </Routes>
+          <PlansProvider>
+            <Routes>
+              {/* Rota inicial - Landing page sempre acessível */}
+              <Route path="/" element={<Landing />} />
+              
+              {/* Rotas públicas - redirecionam se usuário já está logado */}
+              <Route 
+                path="/login" 
+                element={
+                  <PublicRoute>
+                    <Auth />
+                  </PublicRoute>
+                } 
+              />
+              <Route 
+                path="/register" 
+                element={
+                  <PublicRoute>
+                    <Auth />
+                  </PublicRoute>
+                } 
+              />
+              
+              {/* Rota específica para callback do OAuth - sempre acessível */}
+              <Route path="/auth/callback" element={<OAuthCallback />} />
+              
+              {/* Rota protegida do dashboard */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Página 404 */}
+              <Route path="/404" element={<NotFound />} />
+              
+              {/* Captura todas as rotas não definidas e redireciona para 404 */}
+              <Route path="*" element={<Navigate to="/404" replace />} />
+            </Routes>
+          </PlansProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
