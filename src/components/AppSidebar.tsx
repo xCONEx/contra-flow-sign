@@ -290,11 +290,13 @@ export const AppSidebar = () => {
         </SidebarFooter>
       </Sidebar>
 
-      {/* User Profile Dialog */}
-      <UserProfileDialog
-        open={profileDialogOpen}
-        onOpenChange={setProfileDialogOpen}
-      />
+      {/* User Profile Dialog - Apenas renderizar quando necessário */}
+      {profileDialogOpen && (
+        <UserProfileDialog
+          open={profileDialogOpen}
+          onOpenChange={setProfileDialogOpen}
+        />
+      )}
     </>
   );
 };
@@ -302,11 +304,11 @@ export const AppSidebar = () => {
 export function AppSidebarProvider({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-gray-50">
         <AppSidebar />
-        <main className="flex-1 overflow-hidden">
-          {/* Header mobile simplificado - sem duplicação */}
-          <div className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header mobile - sem duplicação */}
+          <div className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
               <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
@@ -316,8 +318,12 @@ export function AppSidebarProvider({ children }: { children: React.ReactNode }) 
             </div>
             <NotificationPanel />
           </div>
-          {children}
-        </main>
+          
+          {/* Main content */}
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
+            {children}
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );
