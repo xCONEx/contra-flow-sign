@@ -1,20 +1,17 @@
 
 import { useAuth } from '@/contexts/AuthContext'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 
-interface ProtectedRouteProps {
+interface PublicRouteProps {
   children: React.ReactNode
   redirectTo?: string
-  requireAuth?: boolean
 }
 
-export const ProtectedRoute = ({ 
+export const PublicRoute = ({ 
   children, 
-  redirectTo = '/login',
-  requireAuth = true 
-}: ProtectedRouteProps) => {
+  redirectTo = '/dashboard' 
+}: PublicRouteProps) => {
   const { user, loading } = useAuth()
-  const location = useLocation()
 
   // Mostra loading enquanto verifica autenticação
   if (loading) {
@@ -28,14 +25,9 @@ export const ProtectedRoute = ({
     )
   }
 
-  // Se requer autenticação e usuário não está logado
-  if (requireAuth && !user) {
-    return <Navigate to={redirectTo} state={{ from: location }} replace />
-  }
-
-  // Se não requer autenticação e usuário está logado (ex: páginas de login)
-  if (!requireAuth && user) {
-    return <Navigate to="/dashboard" replace />
+  // Se usuário está logado, redireciona para dashboard
+  if (user) {
+    return <Navigate to={redirectTo} replace />
   }
 
   return <>{children}</>
