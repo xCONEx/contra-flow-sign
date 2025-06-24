@@ -1,6 +1,8 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   FileText, 
   Users, 
@@ -13,8 +15,16 @@ import {
   Clock,
   CheckCircle,
   LogOut,
-  User
+  User,
+  ChevronsUpDown
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationPanel } from "@/components/NotificationPanel";
@@ -22,6 +32,7 @@ import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { useContracts } from "@/hooks/useContracts";
 import { useClients } from "@/hooks/useClients";
 import { usePlans } from "@/contexts/PlansContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -36,6 +47,9 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
   const { clients } = useClients();
   const { currentPlan, plans, getRemainingContracts } = usePlans();
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const pendingContracts = contracts.filter(c => c.status === 'draft' || c.status === 'sent');
   const signedContracts = contracts.filter(c => c.status === 'signed');
@@ -43,6 +57,38 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
   // Get current plan details
   const currentPlanDetails = plans.find(plan => plan.id === currentPlan.planType);
   const remainingContracts = getRemainingContracts();
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Load user profile
+  useEffect(() => {
+    if (user) {
+      const loadProfile = async () => {
+        try {
+          const { data } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          setUserProfile(data);
+        } catch (error) {
+          console.error('Error loading profile:', error);
+        }
+      };
+
+      loadProfile();
+    }
+  }, [user]);
 
   const menuItems = [
     {
@@ -104,28 +150,47 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
   const handleNavigation = (url: string) => {
     navigate(url);
     // No mobile, fechar sidebar após navegação
-    if (window.innerWidth < 768) {
+    if (isMobile) {
       onToggle();
     }
+  };
+
+  // Sidebar should be open if hovered (desktop) or manually opened (mobile)
+  const sidebarIsOpen = isMobile ? isOpen : (isOpen || isHovered);
+
+  // Get user avatar
+  const getUserAvatar = () => {
+    if (userProfile?.avatar_url) return userProfile.avatar_url;
+    if (user?.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
+    return '';
+  };
+
+  const getUserInitials = () => {
+    const name = userProfile?.name || user?.user_metadata?.name || user?.email || '';
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
   };
 
   return (
     <>
       {/* Overlay for mobile */}
-      {isOpen && (
+      {isMobile && isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-20"
           onClick={onToggle}
         />
       )}
       
-      <div className={`fixed left-0 top-0 h-full bg-white shadow-xl z-30 transition-all duration-300 ${
-        isOpen ? 'w-64' : 'w-16'
-      } ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <div 
+        className={`fixed left-0 top-0 h-full bg-white shadow-xl z-30 transition-all duration-300 ${
+          sidebarIsOpen ? 'w-64' : 'w-16'
+        } ${isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}`}
+        onMouseEnter={() => !isMobile && setIsHovered(true)}
+        onMouseLeave={() => !isMobile && setIsHovered(false)}
+      >
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            {isOpen && (
+            {sidebarIsOpen && (
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
                   <FileText className="w-4 h-4 text-white" />
@@ -134,15 +199,17 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
               </div>
             )}
             <div className="flex items-center gap-2">
-              {isOpen && <NotificationPanel />}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onToggle}
-                className="p-2 hover:bg-gray-100"
-              >
-                {isOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-              </Button>
+              {sidebarIsOpen && <NotificationPanel />}
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggle}
+                  className="p-2 hover:bg-gray-100"
+                >
+                  {isOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -152,15 +219,15 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
           <Button 
             onClick={() => handleNavigation('/contracts/new')}
             className={`w-full bg-blue-600 hover:bg-blue-700 text-white ${
-              !isOpen ? 'px-2' : 'px-4'
+              !sidebarIsOpen ? 'px-2' : 'px-4'
             }`}
           >
             <PlusCircle className="w-4 h-4" />
-            {isOpen && <span className="ml-2">Novo Contrato</span>}
+            {sidebarIsOpen && <span className="ml-2">Novo Contrato</span>}
           </Button>
           
           {/* Contador de contratos restantes */}
-          {isOpen && currentPlanDetails && (
+          {sidebarIsOpen && currentPlanDetails && (
             <div className="mt-3 p-2 bg-blue-50 rounded-lg text-center">
               <p className="text-xs text-blue-600">
                 {remainingContracts === null ? 'Contratos ilimitados' : `${remainingContracts} contratos restantes`}
@@ -169,7 +236,7 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 <div className="w-full bg-blue-200 rounded-full h-1.5 mt-1">
                   <div 
                     className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
-                    style={{ width: `${(currentPlan.contractsUsed / currentPlanDetails.contractLimit) * 100}%` }}
+                    style={{ width: `${Math.min((currentPlan.contractsUsed / currentPlanDetails.contractLimit) * 100, 100)}%` }}
                   ></div>
                 </div>
               )}
@@ -195,11 +262,11 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
               >
                 <div className="flex items-center">
                   <Icon className="w-5 h-5 flex-shrink-0" />
-                  {isOpen && (
+                  {sidebarIsOpen && (
                     <span className="ml-3 font-medium">{item.label}</span>
                   )}
                 </div>
-                {isOpen && item.count !== null && (
+                {sidebarIsOpen && item.count !== null && (
                   <Badge 
                     variant="secondary" 
                     className={`${
@@ -215,45 +282,65 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
         </nav>
 
         {/* User Profile */}
-        {isOpen && (
-          <div className="absolute bottom-4 left-4 right-4">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center flex-1 min-w-0">
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">
-                      {user?.email?.charAt(0).toUpperCase() || 'U'}
-                    </span>
+        <div className="absolute bottom-4 left-4 right-4">
+          <div className="bg-gray-50 rounded-lg p-3">
+            {sidebarIsOpen ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="w-full">
+                  <div className="flex items-center gap-2 hover:bg-gray-100 rounded-md p-2 transition-colors">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={getUserAvatar()} />
+                      <AvatarFallback className="bg-blue-600 text-white text-sm">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {userProfile?.name || user?.user_metadata?.name || user?.email}
+                      </p>
+                      <p className="text-xs text-gray-500">{currentPlanDetails?.name || 'Plano Gratuito'}</p>
+                    </div>
+                    <ChevronsUpDown className="w-4 h-4 text-gray-400" />
                   </div>
-                  <div className="ml-3 flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {user?.user_metadata?.name || user?.email}
-                    </p>
-                    <p className="text-xs text-gray-500">{currentPlanDetails?.name || 'Plano Gratuito'}</p>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <div className="flex items-center gap-2 p-2">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={getUserAvatar()} />
+                      <AvatarFallback className="bg-blue-600 text-white text-sm">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {userProfile?.name || user?.user_metadata?.name || user?.email}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setProfileDialogOpen(true)}
-                    className="p-1 hover:bg-gray-200"
-                  >
-                    <User className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="p-1 hover:bg-gray-200"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setProfileDialogOpen(true)}>
+                    <User className="w-4 h-4 mr-2" />
+                    Perfil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex justify-center">
+                <Avatar className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all">
+                  <AvatarImage src={getUserAvatar()} />
+                  <AvatarFallback className="bg-blue-600 text-white text-sm">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Dialogs */}
@@ -271,7 +358,7 @@ export function AppSidebarProvider({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-screen w-full overflow-x-hidden">
       <AppSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-16'} min-w-0`}>
+      <div className={`flex-1 transition-all duration-300 md:ml-16 min-w-0`}>
         {children}
       </div>
     </div>
