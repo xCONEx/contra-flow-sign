@@ -62,7 +62,7 @@ export type Database = {
           is_default?: boolean | null
           is_public?: boolean | null
           name: string
-          variables: Json
+          variables?: Json
         }
         Update: {
           category?: string | null
