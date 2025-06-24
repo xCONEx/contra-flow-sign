@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
@@ -135,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true)
       
       // Use the current window location for redirect
-      const redirectUrl = `${window.location.origin}/dashboard`
+      const redirectUrl = `${window.location.origin}/auth/callback`
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -188,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true)
       
       // Use the current window location for redirect
-      const redirectUrl = `${window.location.origin}/dashboard`
+      const redirectUrl = `${window.location.origin}/auth/callback`
       
       console.log('Attempting Google sign in with redirect to:', redirectUrl)
       
