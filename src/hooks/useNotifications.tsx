@@ -21,6 +21,7 @@ export const useNotifications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -94,17 +95,22 @@ export const useNotifications = () => {
     }
   };
 
-  // Escutar mudanças em tempo real - com cleanup adequado
+  // Escutar mudanças em tempo real - com prevenção de múltiplas inscrições
   useEffect(() => {
-    if (!user) return;
+    if (!user || isSubscribedRef.current) return;
+
+    console.log('Setting up notifications subscription for user:', user.id);
 
     // Limpar canal anterior se existir
     if (channelRef.current) {
+      console.log('Removing existing channel');
       supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
+    const channelName = `notifications_${user.id}_${Date.now()}`;
     const channel = supabase
-      .channel(`notifications_${user.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -114,6 +120,7 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          console.log('New notification received:', payload);
           const newNotification = payload.new as Notification;
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
@@ -125,15 +132,22 @@ export const useNotifications = () => {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          isSubscribedRef.current = true;
+        }
+      });
 
     channelRef.current = channel;
 
     return () => {
+      console.log('Cleaning up notifications subscription');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
+      isSubscribedRef.current = false;
     };
   }, [user?.id, toast]);
 
