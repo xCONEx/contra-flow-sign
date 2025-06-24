@@ -25,6 +25,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuBadge,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationPanel } from "@/components/NotificationPanel";
@@ -34,12 +49,7 @@ import { useClients } from "@/hooks/useClients";
 import { usePlans } from "@/contexts/PlansContext";
 import { supabase } from "@/integrations/supabase/client";
 
-interface SidebarProps {
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
+export const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
@@ -48,8 +58,6 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
   const { currentPlan, plans, getRemainingContracts } = usePlans();
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   const pendingContracts = contracts.filter(c => c.status === 'draft' || c.status === 'sent');
   const signedContracts = contracts.filter(c => c.status === 'signed');
@@ -57,17 +65,6 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
   // Get current plan details
   const currentPlanDetails = plans.find(plan => plan.id === currentPlan.planType);
   const remainingContracts = getRemainingContracts();
-
-  // Check if mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Load user profile
   useEffect(() => {
@@ -149,14 +146,7 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
 
   const handleNavigation = (url: string) => {
     navigate(url);
-    // No mobile, fechar sidebar após navegação
-    if (isMobile) {
-      onToggle();
-    }
   };
-
-  // Sidebar should be open if hovered (desktop) or manually opened (mobile)
-  const sidebarIsOpen = isMobile ? isOpen : (isOpen || isHovered);
 
   // Get user avatar
   const getUserAvatar = () => {
@@ -172,176 +162,129 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
 
   return (
     <>
-      {/* Overlay for mobile */}
-      {isMobile && isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20"
-          onClick={onToggle}
-        />
-      )}
-      
-      <div 
-        className={`fixed left-0 top-0 h-full bg-white shadow-xl z-30 transition-all duration-300 ${
-          sidebarIsOpen ? 'w-64' : 'w-16'
-        } ${isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}`}
-        onMouseEnter={() => !isMobile && setIsHovered(true)}
-        onMouseLeave={() => !isMobile && setIsHovered(false)}
-      >
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            {sidebarIsOpen && (
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-                  <FileText className="w-4 h-4 text-white" />
-                </div>
-                <span className="font-bold text-xl text-gray-900">ContratPro</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              {sidebarIsOpen && <NotificationPanel />}
-              {isMobile && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onToggle}
-                  className="p-2 hover:bg-gray-100"
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <div className="flex items-center gap-2 px-4 py-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-xl text-gray-900 group-data-[collapsible=icon]:hidden">
+              ContratPro
+            </span>
+          </div>
+        </SidebarHeader>
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              {/* Create Button */}
+              <div className="px-2 mb-4">
+                <Button 
+                  onClick={() => handleNavigation('/contracts/new')}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  {isOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                  <PlusCircle className="w-4 h-4" />
+                  <span className="group-data-[collapsible=icon]:hidden ml-2">
+                    Novo Contrato
+                  </span>
                 </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Create Button */}
-        <div className="p-4">
-          <Button 
-            onClick={() => handleNavigation('/contracts/new')}
-            className={`w-full bg-blue-600 hover:bg-blue-700 text-white ${
-              !sidebarIsOpen ? 'px-2' : 'px-4'
-            }`}
-          >
-            <PlusCircle className="w-4 h-4" />
-            {sidebarIsOpen && <span className="ml-2">Novo Contrato</span>}
-          </Button>
-          
-          {/* Contador de contratos restantes */}
-          {sidebarIsOpen && currentPlanDetails && (
-            <div className="mt-3 p-2 bg-blue-50 rounded-lg text-center">
-              <p className="text-xs text-blue-600">
-                {remainingContracts === null ? 'Contratos ilimitados' : `${remainingContracts} contratos restantes`}
-              </p>
-              {remainingContracts !== null && currentPlanDetails.contractLimit && (
-                <div className="w-full bg-blue-200 rounded-full h-1.5 mt-1">
-                  <div 
-                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
-                    style={{ width: `${Math.min((currentPlan.contractsUsed / currentPlanDetails.contractLimit) * 100, 100)}%` }}
-                  ></div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className="px-4 space-y-2 flex-1 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.url;
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavigation(item.url)}
-                className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-blue-50 text-blue-600 border border-blue-200' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <div className="flex items-center">
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  {sidebarIsOpen && (
-                    <span className="ml-3 font-medium">{item.label}</span>
-                  )}
-                </div>
-                {sidebarIsOpen && item.count !== null && (
-                  <Badge 
-                    variant="secondary" 
-                    className={`${
-                      isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {item.count}
-                  </Badge>
+                
+                {/* Contador de contratos restantes */}
+                {currentPlanDetails && (
+                  <div className="mt-3 p-2 bg-blue-50 rounded-lg text-center group-data-[collapsible=icon]:hidden">
+                    <p className="text-xs text-blue-600">
+                      {remainingContracts === null ? 'Contratos ilimitados' : `${remainingContracts} contratos restantes`}
+                    </p>
+                    {remainingContracts !== null && currentPlanDetails.contractLimit && (
+                      <div className="w-full bg-blue-200 rounded-full h-1.5 mt-1">
+                        <div 
+                          className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                          style={{ width: `${Math.min((currentPlan.contractsUsed / currentPlanDetails.contractLimit) * 100, 100)}%` }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* User Profile */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="bg-gray-50 rounded-lg p-3">
-            {sidebarIsOpen ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger className="w-full">
-                  <div className="flex items-center gap-2 hover:bg-gray-100 rounded-md p-2 transition-colors">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={getUserAvatar()} />
-                      <AvatarFallback className="bg-blue-600 text-white text-sm">
-                        {getUserInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {userProfile?.name || user?.user_metadata?.name || user?.email}
-                      </p>
-                      <p className="text-xs text-gray-500">{currentPlanDetails?.name || 'Plano Gratuito'}</p>
-                    </div>
-                    <ChevronsUpDown className="w-4 h-4 text-gray-400" />
-                  </div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  <div className="flex items-center gap-2 p-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={getUserAvatar()} />
-                      <AvatarFallback className="bg-blue-600 text-white text-sm">
-                        {getUserInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {userProfile?.name || user?.user_metadata?.name || user?.email}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                    </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setProfileDialogOpen(true)}>
-                    <User className="w-4 h-4 mr-2" />
-                    Perfil
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sair
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex justify-center">
-                <Avatar className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all">
-                  <AvatarImage src={getUserAvatar()} />
-                  <AvatarFallback className="bg-blue-600 text-white text-sm">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
               </div>
-            )}
+
+              {/* Navigation Menu */}
+              <SidebarMenu>
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.url;
+                  
+                  return (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton 
+                        asChild
+                        isActive={isActive}
+                        onClick={() => handleNavigation(item.url)}
+                      >
+                        <button className="w-full flex items-center">
+                          <Icon className="w-5 h-5" />
+                          <span>{item.label}</span>
+                          {item.count !== null && (
+                            <SidebarMenuBadge>{item.count}</SidebarMenuBadge>
+                          )}
+                        </button>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter>
+          <div className="p-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start gap-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={getUserAvatar()} />
+                    <AvatarFallback className="bg-blue-600 text-white text-sm">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left min-w-0 group-data-[collapsible=icon]:hidden">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {userProfile?.name || user?.user_metadata?.name || user?.email}
+                    </p>
+                    <p className="text-xs text-gray-500">{currentPlanDetails?.name || 'Plano Gratuito'}</p>
+                  </div>
+                  <ChevronsUpDown className="w-4 h-4 text-gray-400 group-data-[collapsible=icon]:hidden" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <div className="flex items-center gap-2 p-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={getUserAvatar()} />
+                    <AvatarFallback className="bg-blue-600 text-white text-sm">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {userProfile?.name || user?.user_metadata?.name || user?.email}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setProfileDialogOpen(true)}>
+                  <User className="w-4 h-4 mr-2" />
+                  Perfil
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
-      </div>
+        </SidebarFooter>
+      </Sidebar>
 
       {/* Dialogs */}
       <UserProfileDialog
@@ -353,14 +296,27 @@ export const AppSidebar = ({ isOpen, onToggle }: SidebarProps) => {
 };
 
 export function AppSidebarProvider({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
-      <AppSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-      <div className={`flex-1 transition-all duration-300 md:ml-16 min-w-0`}>
-        {children}
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <main className="flex-1 overflow-hidden">
+          {/* Mobile Header */}
+          <div className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <FileText className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-bold text-xl text-gray-900">ContratPro</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <NotificationPanel />
+              <SidebarTrigger className="md:hidden" />
+            </div>
+          </div>
+          {children}
+        </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

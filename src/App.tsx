@@ -9,6 +9,7 @@ import { PlansProvider } from "@/contexts/PlansContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PublicRoute } from "@/components/PublicRoute";
 import { OAuthCallback } from "@/components/OAuthCallback";
+import { AppSidebarProvider } from "@/components/AppSidebar";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -56,12 +57,14 @@ const App = () => (
               {/* Rota específica para callback do OAuth - sempre acessível */}
               <Route path="/auth/callback" element={<OAuthCallback />} />
               
-              {/* Rota protegida principal - Dashboard */}
+              {/* Rotas protegidas com sidebar */}
               <Route 
                 path="/" 
                 element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <AppSidebarProvider>
+                      <Dashboard />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
@@ -69,7 +72,9 @@ const App = () => (
                 path="/dashboard" 
                 element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <AppSidebarProvider>
+                      <Dashboard />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
@@ -77,7 +82,9 @@ const App = () => (
                 path="/contracts" 
                 element={
                   <ProtectedRoute>
-                    <Contracts />
+                    <AppSidebarProvider>
+                      <Contracts />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
@@ -85,7 +92,9 @@ const App = () => (
                 path="/contracts/new" 
                 element={
                   <ProtectedRoute>
-                    <NewContract />
+                    <AppSidebarProvider>
+                      <NewContract />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
@@ -93,7 +102,9 @@ const App = () => (
                 path="/clients" 
                 element={
                   <ProtectedRoute>
-                    <Clients />
+                    <AppSidebarProvider>
+                      <Clients />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
@@ -101,7 +112,9 @@ const App = () => (
                 path="/pending" 
                 element={
                   <ProtectedRoute>
-                    <Pending />
+                    <AppSidebarProvider>
+                      <Pending />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
@@ -109,7 +122,9 @@ const App = () => (
                 path="/signed" 
                 element={
                   <ProtectedRoute>
-                    <Signed />
+                    <AppSidebarProvider>
+                      <Signed />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
@@ -117,7 +132,9 @@ const App = () => (
                 path="/analytics" 
                 element={
                   <ProtectedRoute>
-                    <Analytics />
+                    <AppSidebarProvider>
+                      <Analytics />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
@@ -125,7 +142,9 @@ const App = () => (
                 path="/settings" 
                 element={
                   <ProtectedRoute>
-                    <Settings />
+                    <AppSidebarProvider>
+                      <Settings />
+                    </AppSidebarProvider>
                   </ProtectedRoute>
                 } 
               />
