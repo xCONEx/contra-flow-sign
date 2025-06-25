@@ -1,16 +1,47 @@
-// Tipo Json puro, sem undefined (JSON não aceita undefined, só null)
 export type Json =
   | string
   | number
   | boolean
   | null
-  | { [key: string]: Json }
+  | { [key: string]: Json | undefined }
   | Json[]
 
-// Estrutura completa do banco
 export type Database = {
   public: {
     Tables: {
+      clients: {
+        Row: {
+          address: string | null
+          cpf_cnpj: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       contract_events: {
         Row: {
           contract_id: string | null
@@ -38,9 +69,16 @@ export type Database = {
             foreignKeyName: "contract_events_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       contract_templates: {
@@ -81,39 +119,62 @@ export type Database = {
       }
       contracts: {
         Row: {
+          client_id: string
           content: string
           created_at: string | null
+          due_date: string | null
           expires_at: string | null
           id: string
+          sent_at: string | null
           signature_token: string | null
+          signed_at: string | null
           status: string | null
           title: string
+          total_value: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          client_id: string
           content: string
           created_at?: string | null
+          due_date?: string | null
           expires_at?: string | null
           id?: string
+          sent_at?: string | null
           signature_token?: string | null
+          signed_at?: string | null
           status?: string | null
           title: string
+          total_value?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          client_id?: string
           content?: string
           created_at?: string | null
+          due_date?: string | null
           expires_at?: string | null
           id?: string
+          sent_at?: string | null
           signature_token?: string | null
+          signed_at?: string | null
           status?: string | null
           title?: string
+          total_value?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_contract_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -151,9 +212,16 @@ export type Database = {
             foreignKeyName: "notifications_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       subscription_plans: {
@@ -199,13 +267,19 @@ export type Database = {
           has_contratpro: boolean
           id: string
           name: string
+          signature_url: string | null
+          updated_at: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
           email: string
           has_contratpro?: boolean
-          id?: string
+          id: string
           name: string
+          signature_url?: string | null
+          updated_at?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -213,14 +287,43 @@ export type Database = {
           has_contratpro?: boolean
           id?: string
           name?: string
+          signature_url?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      contract_reports: {
+        Row: {
+          client_email: string | null
+          client_name: string | null
+          created_at: string | null
+          days_to_sign: number | null
+          due_date: string | null
+          id: string | null
+          is_overdue: boolean | null
+          revenue: number | null
+          sent_at: string | null
+          signed_at: string | null
+          status: string | null
+          title: string | null
+          total_value: number | null
+          user_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      cleanup_old_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      get_contract_reports: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown[]
+      }
       handle_expired_contracts: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -235,76 +338,110 @@ export type Database = {
   }
 }
 
-// Tipo auxiliar para pegar o schema público
-type DefaultSchema = Database["public"]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
-// Tipos genéricos para Rows, Insert e Update em qualquer tabela
 export type Tables<
-  T extends keyof DefaultSchema["Tables"] | { schema: keyof Database },
-  TableName extends T extends { schema: keyof Database }
-    ? keyof Database[T["schema"]]["Tables"]
-    : never = never
-> = T extends { schema: keyof Database }
-  ? Database[T["schema"]]["Tables"][TableName] extends { Row: infer R }
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
     ? R
     : never
-  : T extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][T] extends { Row: infer R }
-    ? R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
-  : never
 
 export type TablesInsert<
-  T extends keyof DefaultSchema["Tables"] | { schema: keyof Database },
-  TableName extends T extends { schema: keyof Database }
-    ? keyof Database[T["schema"]]["Tables"]
-    : never = never
-> = T extends { schema: keyof Database }
-  ? Database[T["schema"]]["Tables"][TableName] extends { Insert: infer I }
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
     ? I
     : never
-  : T extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][T] extends { Insert: infer I }
-    ? I
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
     : never
-  : never
 
 export type TablesUpdate<
-  T extends keyof DefaultSchema["Tables"] | { schema: keyof Database },
-  TableName extends T extends { schema: keyof Database }
-    ? keyof Database[T["schema"]]["Tables"]
-    : never = never
-> = T extends { schema: keyof Database }
-  ? Database[T["schema"]]["Tables"][TableName] extends { Update: infer U }
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
     ? U
     : never
-  : T extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][T] extends { Update: infer U }
-    ? U
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
     : never
-  : never
 
 export type Enums<
-  T extends keyof DefaultSchema["Enums"] | { schema: keyof Database },
-  EnumName extends T extends { schema: keyof Database }
-    ? keyof Database[T["schema"]]["Enums"]
-    : never = never
-> = T extends { schema: keyof Database }
-  ? Database[T["schema"]]["Enums"][EnumName]
-  : T extends keyof DefaultSchema["Enums"]
-  ? DefaultSchema["Enums"][T]
-  : never
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof Database },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
-  T extends keyof DefaultSchema["CompositeTypes"] | { schema: keyof Database },
-  CompositeTypeName extends T extends { schema: keyof Database }
-    ? keyof Database[T["schema"]]["CompositeTypes"]
-    : never = never
-> = T extends { schema: keyof Database }
-  ? Database[T["schema"]]["CompositeTypes"][CompositeTypeName]
-  : T extends keyof DefaultSchema["CompositeTypes"]
-  ? DefaultSchema["CompositeTypes"][T]
-  : never
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {

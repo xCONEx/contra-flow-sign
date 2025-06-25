@@ -13,6 +13,8 @@ export const PublicRoute = ({
 }: PublicRouteProps) => {
   const { user, loading } = useAuth()
 
+  console.log('PublicRoute - Loading:', loading, 'User:', !!user);
+
   // Mostra loading enquanto verifica autenticação
   if (loading) {
     return (
@@ -27,6 +29,7 @@ export const PublicRoute = ({
 
   // Se usuário está logado, redireciona para dashboard
   if (user) {
+    console.log('Usuário logado, redirecionando para dashboard');
     return <Navigate to={redirectTo} replace />
   }
 

@@ -13,77 +13,79 @@ export const OAuthCallback = () => {
     const handleOAuthCallback = async () => {
       try {
         console.log('OAuth Callback - Current URL:', window.location.href);
-        console.log('OAuth Callback - Hash:', window.location.hash);
         
-        // Aguardar um pouco para garantir que o Supabase processe a URL
-        await new Promise(resolve => setTimeout(resolve, 100));
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
         
-        // Verificar se já existe uma sessão válida
+        // Verificar se há erro na URL
+        const urlError = urlParams.get('error') || hashParams.get('error');
+        const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+        const errorCode = urlParams.get('error_code') || hashParams.get('error_code');
+        
+        if (urlError) {
+          console.error('Erro OAuth na URL:', {
+            error: urlError,
+            description: errorDescription,
+            code: errorCode
+          });
+          
+          let errorMessage = "Erro durante o login";
+          
+          if (errorDescription?.includes('Database error saving new user')) {
+            errorMessage = "Erro no servidor. Tente fazer login novamente ou entre em contato com o suporte.";
+          } else if (urlError === 'access_denied') {
+            errorMessage = "Login cancelado pelo usuário.";
+          } else if (errorDescription) {
+            errorMessage = decodeURIComponent(errorDescription);
+          }
+          
+          toast({
+            title: "Erro no login",
+            description: errorMessage,
+            variant: "destructive"
+          });
+          
+          // Limpar URL de erro e redirecionar
+          window.history.replaceState({}, document.title, '/login');
+          navigate('/login', { replace: true });
+          return;
+        }
+
+        // Aguardar processamento do Supabase
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verificar sessão atual
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
           console.error('Erro ao obter sessão:', sessionError);
           toast({
             title: "Erro no login",
-            description: "Erro ao processar login. Tente novamente.",
+            description: "Erro ao processar autenticação. Tente novamente.",
             variant: "destructive"
           });
           navigate('/login', { replace: true });
           return;
         }
 
-        if (sessionData.session) {
-          console.log('Sessão encontrada:', sessionData.session.user.email);
+        if (sessionData.session?.user) {
+          console.log('Login realizado com sucesso:', sessionData.session.user.email);
+          
+          const userName = sessionData.session.user.user_metadata?.name || 
+                          sessionData.session.user.user_metadata?.full_name || 
+                          sessionData.session.user.email;
+          
           toast({
             title: "Login realizado com sucesso!",
-            description: `Bem-vindo, ${sessionData.session.user.user_metadata?.name || sessionData.session.user.email}!`
+            description: `Bem-vindo, ${userName}!`
           });
           
-          // Limpar a URL e redirecionar para o dashboard
+          // Limpar URL e redirecionar
           window.history.replaceState({}, document.title, '/dashboard');
           navigate('/dashboard', { replace: true });
         } else {
-          console.log('Nenhuma sessão encontrada após callback');
-          
-          // Tentar processar tokens manualmente se não houver sessão
-          const hashParams = new URLSearchParams(window.location.hash.substring(1));
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
-          
-          if (accessToken && refreshToken) {
-            console.log('Tentando definir sessão com tokens da URL...');
-            
-            const { data, error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            });
-            
-            if (error) {
-              console.error('Erro ao definir sessão:', error);
-              toast({
-                title: "Erro no login",
-                description: "Erro ao processar tokens de autenticação.",
-                variant: "destructive"
-              });
-              navigate('/login', { replace: true });
-            } else if (data.session) {
-              console.log('Sessão definida com sucesso:', data.session.user.email);
-              toast({
-                title: "Login realizado com sucesso!",
-                description: `Bem-vindo, ${data.session.user.user_metadata?.name || data.session.user.email}!`
-              });
-              
-              // Limpar a URL e redirecionar para o dashboard
-              window.history.replaceState({}, document.title, '/dashboard');
-              navigate('/dashboard', { replace: true });
-            } else {
-              console.log('Falha ao definir sessão');
-              navigate('/login', { replace: true });
-            }
-          } else {
-            console.log('Nenhum token encontrado na URL');
-            navigate('/login', { replace: true });
-          }
+          console.log('Nenhuma sessão encontrada, redirecionando para login');
+          navigate('/login', { replace: true });
         }
       } catch (error) {
         console.error('Erro inesperado no callback OAuth:', error);

@@ -16,6 +16,8 @@ export const ProtectedRoute = ({
   const { user, loading } = useAuth()
   const location = useLocation()
 
+  console.log('ProtectedRoute - Loading:', loading, 'User:', !!user, 'RequireAuth:', requireAuth);
+
   // Mostra loading enquanto verifica autenticação
   if (loading) {
     return (
@@ -30,11 +32,13 @@ export const ProtectedRoute = ({
 
   // Se requer autenticação e usuário não está logado
   if (requireAuth && !user) {
+    console.log('Redirecionando para login - usuário não autenticado');
     return <Navigate to={redirectTo} state={{ from: location }} replace />
   }
 
   // Se não requer autenticação e usuário está logado (ex: páginas de login)
   if (!requireAuth && user) {
+    console.log('Redirecionando para dashboard - usuário já autenticado');
     return <Navigate to="/dashboard" replace />
   }
 
